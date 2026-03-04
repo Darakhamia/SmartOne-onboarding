@@ -475,15 +475,7 @@ class DashboardScreen extends StatelessWidget {
         if (provider.steps.length > 6)
           Center(
             child: TextButton(
-              onPressed: () {
-                // Switch to progress tab
-                Provider.of<OnboardingProvider>(
-                  // ignore: use_build_context_synchronously
-                  // This is fine as onPressed is synchronous
-                  context as BuildContext,
-                  listen: false,
-                ).setTabIndex(2);
-              },
+              onPressed: () => provider.setTabIndex(2),
               child: const Text('View all steps →', style: TextStyle(color: AppTheme.primary)),
             ),
           ),

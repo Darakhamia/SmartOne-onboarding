@@ -144,7 +144,7 @@ class AppTheme {
         hintStyle: GoogleFonts.inter(color: textLight, fontSize: 14),
         labelStyle: GoogleFonts.inter(color: textSecondary, fontSize: 14),
       ),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         color: cardBg,
         elevation: 0,
         shape: RoundedRectangleBorder(
