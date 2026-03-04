@@ -1,0 +1,32 @@
+name: smartone_onboarding
+description: SmartOne Merchant Onboarding - POS Terminal Onboarding Platform
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  provider: ^6.1.1
+  shared_preferences: ^2.2.2
+  intl: ^0.19.0
+  file_picker: ^6.1.1
+  url_launcher: ^6.2.4
+  google_fonts: ^6.1.0
+  animate_do: ^3.3.4
+  percent_indicator: ^4.2.3
+  timeline_tile: ^2.0.0
+  flutter_svg: ^2.0.9
+  cupertino_icons: ^1.0.6
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/
