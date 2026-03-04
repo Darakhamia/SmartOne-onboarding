@@ -47,17 +47,17 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                 position: _slideUp,
                 child: Column(
                   children: [
-                    const SizedBox(height: 60),
+                    const SizedBox(height: 44),
                     _buildLogo(),
-                    const SizedBox(height: 48),
+                    const SizedBox(height: 36),
                     _buildHero(),
-                    const SizedBox(height: 48),
-                    _buildSteps(),
-                    const SizedBox(height: 48),
-                    _buildButtons(),
                     const SizedBox(height: 32),
+                    _buildSteps(),
+                    const SizedBox(height: 36),
+                    _buildButtons(),
+                    const SizedBox(height: 28),
                     _buildFooter(),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 20),
                   ],
                 ),
               ),
@@ -117,7 +117,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
 
   Widget _buildHero() {
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.fromLTRB(24, 22, 24, 24),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [AppTheme.primarySurface, Colors.white],
@@ -175,7 +175,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
           final idx = e.key;
           final step = e.value;
           return Padding(
-            padding: const EdgeInsets.only(bottom: 10),
+            padding: const EdgeInsets.only(bottom: 8),
             child: Row(
               children: [
                 Container(

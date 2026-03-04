@@ -183,7 +183,7 @@ class _ApplicationFormScreenState extends State<ApplicationFormScreen> {
             child: Form(
               key: _formKey,
               child: ListView(
-                padding: const EdgeInsets.fromLTRB(20, 20, 20, 120),
+                padding: const EdgeInsets.fromLTRB(20, 24, 20, 96),
                 children: [
                   if (_currentSection == 0) _buildCompanyProfile(),
                   if (_currentSection == 1) _buildBusinessQuestionnaire(),
@@ -202,41 +202,84 @@ class _ApplicationFormScreenState extends State<ApplicationFormScreen> {
   }
 
   Widget _buildSectionTabs() {
-    return Container(
-      height: 48,
-      color: AppTheme.white,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        itemCount: _sections.length,
-        itemBuilder: (ctx, i) {
-          final selected = _currentSection == i;
-          return GestureDetector(
-            onTap: () => setState(() => _currentSection = i),
-            child: Container(
-              margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-              padding: const EdgeInsets.symmetric(horizontal: 14),
-              decoration: BoxDecoration(
-                color: selected ? AppTheme.primary : AppTheme.surface,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: selected ? AppTheme.primary : AppTheme.border,
-                ),
-              ),
-              child: Center(
-                child: Text(
-                  _sections[i],
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: selected ? Colors.white : AppTheme.textSecondary,
+    return Column(
+      children: [
+        Container(
+          height: 52,
+          color: AppTheme.white,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            itemCount: _sections.length,
+            itemBuilder: (ctx, i) {
+              final selected = _currentSection == i;
+              final done = i < _currentSection;
+              return GestureDetector(
+                onTap: () => setState(() => _currentSection = i),
+                child: Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 9),
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  decoration: BoxDecoration(
+                    color: selected
+                        ? AppTheme.primary
+                        : done
+                            ? AppTheme.primary.withOpacity(0.07)
+                            : AppTheme.surface,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: selected
+                          ? AppTheme.primary
+                          : done
+                              ? AppTheme.primary.withOpacity(0.25)
+                              : AppTheme.border,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (done)
+                        Padding(
+                          padding: const EdgeInsets.only(right: 5),
+                          child: Icon(Icons.check_circle_rounded, size: 12, color: AppTheme.primary),
+                        )
+                      else
+                        Padding(
+                          padding: const EdgeInsets.only(right: 5),
+                          child: Text(
+                            '${i + 1}',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: selected ? Colors.white.withOpacity(0.7) : AppTheme.textLight,
+                            ),
+                          ),
+                        ),
+                      Text(
+                        _sections[i],
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: selected
+                              ? Colors.white
+                              : done
+                                  ? AppTheme.primary
+                                  : AppTheme.textSecondary,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ),
-            ),
-          );
-        },
-      ),
+              );
+            },
+          ),
+        ),
+        LinearProgressIndicator(
+          value: _sections.length > 1 ? _currentSection / (_sections.length - 1) : 0,
+          backgroundColor: AppTheme.border,
+          color: AppTheme.primary,
+          minHeight: 2,
+        ),
+      ],
     );
   }
 
@@ -246,7 +289,7 @@ class _ApplicationFormScreenState extends State<ApplicationFormScreen> {
       children: [
         const FormSectionHeader(title: 'Company Profile', icon: Icons.business_outlined),
         _field('European Company Name', _companyNameCtrl, hint: 'e.g. Apex Retail Solutions Ltd'),
-        const SizedBox(height: 14),
+        const SizedBox(height: 16),
         _field('Company ID / Registration Number', _companyIdCtrl, hint: 'e.g. GB12345678'),
       ],
     );
@@ -267,25 +310,27 @@ class _ApplicationFormScreenState extends State<ApplicationFormScreen> {
               .toList(),
           onChanged: (v) => setState(() => _selectedRetailType = v!),
         ),
-        const SizedBox(height: 14),
+        const SizedBox(height: 16),
         _field('Number of Outlets', _numberOfOutletsCtrl, hint: '1', keyboardType: TextInputType.number),
-        const SizedBox(height: 14),
+        const SizedBox(height: 16),
         Container(
-          padding: const EdgeInsets.all(14),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           decoration: BoxDecoration(
             color: AppTheme.surface,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: AppTheme.border),
           ),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Custom Receipt Design', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
-                  Text('Branded receipt with your logo', style: TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
-                ],
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: const [
+                    Text('Custom Receipt Design', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+                    SizedBox(height: 2),
+                    Text('Branded receipt with your logo', style: TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
+                  ],
+                ),
               ),
               Switch(
                 value: _customReceipt,
@@ -295,7 +340,7 @@ class _ApplicationFormScreenState extends State<ApplicationFormScreen> {
             ],
           ),
         ),
-        const SizedBox(height: 14),
+        const SizedBox(height: 16),
         const Text('Acceptance Currency', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppTheme.textSecondary)),
         const SizedBox(height: 8),
         _currencyDropdown(_acceptanceCurrency, (v) => setState(() => _acceptanceCurrency = v!)),
@@ -311,30 +356,118 @@ class _ApplicationFormScreenState extends State<ApplicationFormScreen> {
         const Text('Currency', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppTheme.textSecondary)),
         const SizedBox(height: 8),
         _currencyDropdown(_currency, (v) => setState(() => _currency = v!)),
+        const SizedBox(height: 20),
+
+        // === Turnover — primary block ===
+        _buildSalesGroup(
+          label: 'Turnover',
+          icon: Icons.account_balance_wallet_outlined,
+          color: AppTheme.primary,
+          children: [
+            Row(children: [
+              Expanded(child: _fieldWithCurrency('Monthly', _turnoverMonthlyCtrl, hint: '85,000')),
+              const SizedBox(width: 12),
+              Expanded(child: _fieldWithCurrency('Annual', _turnoverAnnualCtrl, hint: '1,020,000')),
+            ]),
+          ],
+        ),
         const SizedBox(height: 14),
-        Row(children: [
-          Expanded(child: _field('Volume Monthly', _volumeMonthlyCtrl, hint: '85,000', keyboardType: TextInputType.number)),
-          const SizedBox(width: 12),
-          Expanded(child: _field('Transactions Monthly', _txMonthlyCtrl, hint: '1,200', keyboardType: TextInputType.number)),
-        ]),
+
+        // === Volume & Transactions ===
+        _buildSalesGroup(
+          label: 'Volume & Transactions',
+          icon: Icons.bar_chart_rounded,
+          color: AppTheme.accent,
+          children: [
+            Row(children: [
+              Expanded(child: _fieldWithCurrency('Volume Monthly', _volumeMonthlyCtrl, hint: '85,000')),
+              const SizedBox(width: 12),
+              Expanded(child: _field('Transactions / mo', _txMonthlyCtrl, hint: '1,200', keyboardType: TextInputType.number)),
+            ]),
+            const SizedBox(height: 12),
+            _field('Transactions Annual', _txAnnualCtrl, hint: '14,400', keyboardType: TextInputType.number),
+          ],
+        ),
         const SizedBox(height: 14),
-        Row(children: [
-          Expanded(child: _field('Transactions Annual', _txAnnualCtrl, hint: '14,400', keyboardType: TextInputType.number)),
-          const SizedBox(width: 12),
-          Expanded(child: _field('Avg Transaction', _avgTxCtrl, hint: '70.83', keyboardType: TextInputType.numberWithOptions(decimal: true))),
-        ]),
-        const SizedBox(height: 14),
-        Row(children: [
-          Expanded(child: _field('Max Transaction', _maxTxCtrl, hint: '5,000', keyboardType: TextInputType.numberWithOptions(decimal: true))),
-          const SizedBox(width: 12),
-          Expanded(child: _field('Min Transaction', _minTxCtrl, hint: '5.00', keyboardType: TextInputType.numberWithOptions(decimal: true))),
-        ]),
-        const SizedBox(height: 14),
-        Row(children: [
-          Expanded(child: _field('Turnover Monthly', _turnoverMonthlyCtrl, hint: '85,000', keyboardType: TextInputType.number)),
-          const SizedBox(width: 12),
-          Expanded(child: _field('Turnover Annual', _turnoverAnnualCtrl, hint: '1,020,000', keyboardType: TextInputType.number)),
-        ]),
+
+        // === Transaction Values ===
+        _buildSalesGroup(
+          label: 'Transaction Values',
+          icon: Icons.receipt_long_outlined,
+          color: AppTheme.warning,
+          children: [
+            Row(children: [
+              Expanded(child: _fieldWithCurrency('Average', _avgTxCtrl, hint: '70.83', decimal: true)),
+              const SizedBox(width: 12),
+              Expanded(child: _fieldWithCurrency('Maximum', _maxTxCtrl, hint: '5,000.00', decimal: true)),
+            ]),
+            const SizedBox(height: 12),
+            Row(children: [
+              Expanded(child: _fieldWithCurrency('Minimum', _minTxCtrl, hint: '5.00', decimal: true)),
+              const Expanded(child: SizedBox()),
+            ]),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSalesGroup({
+    required String label,
+    required IconData icon,
+    required Color color,
+    required List<Widget> children,
+  }) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.04),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: color.withOpacity(0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(children: [
+            Container(
+              padding: const EdgeInsets.all(5),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.12),
+                borderRadius: BorderRadius.circular(7),
+              ),
+              child: Icon(icon, size: 13, color: color),
+            ),
+            const SizedBox(width: 7),
+            Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: color, letterSpacing: 0.3)),
+          ]),
+          const SizedBox(height: 14),
+          ...children,
+        ],
+      ),
+    );
+  }
+
+  Widget _fieldWithCurrency(
+    String label,
+    TextEditingController ctrl, {
+    String hint = '',
+    bool decimal = false,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppTheme.textSecondary)),
+        const SizedBox(height: 6),
+        TextFormField(
+          controller: ctrl,
+          keyboardType: decimal ? TextInputType.numberWithOptions(decimal: true) : TextInputType.number,
+          style: const TextStyle(fontSize: 14, color: AppTheme.textPrimary, fontWeight: FontWeight.w500),
+          decoration: InputDecoration(
+            hintText: hint,
+            prefixText: '$_currency ',
+            prefixStyle: const TextStyle(fontSize: 13, color: AppTheme.textSecondary, fontWeight: FontWeight.w500),
+          ),
+        ),
       ],
     );
   }
@@ -409,22 +542,26 @@ class _ApplicationFormScreenState extends State<ApplicationFormScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const FormSectionHeader(title: 'Contact Details', icon: Icons.contact_mail_outlined),
-        _field('Company Name', _contactCompanyCtrl, hint: 'Legal company name'),
-        const SizedBox(height: 14),
-        _field('TIN / Tax Number', _tinCtrl, hint: 'e.g. GB987654321'),
-        const SizedBox(height: 14),
+        Row(children: [
+          Expanded(child: _field('Company Name', _contactCompanyCtrl, hint: 'Legal company name')),
+          const SizedBox(width: 12),
+          Expanded(child: _field('TIN / Tax Number', _tinCtrl, hint: 'e.g. GB987654321')),
+        ]),
+        const SizedBox(height: 16),
         _field('Contact Person', _contactPersonCtrl, hint: 'Full name'),
-        const SizedBox(height: 14),
-        _field('Phone', _phoneCtrl, hint: '+44 20 0000 0000', keyboardType: TextInputType.phone),
-        const SizedBox(height: 14),
-        _field('Email', _emailCtrl, hint: 'contact@company.com', keyboardType: TextInputType.emailAddress),
-        const SizedBox(height: 14),
+        const SizedBox(height: 16),
+        Row(children: [
+          Expanded(child: _field('Phone', _phoneCtrl, hint: '+44 20 0000 0000', keyboardType: TextInputType.phone)),
+          const SizedBox(width: 12),
+          Expanded(child: _field('Email', _emailCtrl, hint: 'contact@company.com', keyboardType: TextInputType.emailAddress)),
+        ]),
+        const SizedBox(height: 16),
         Row(children: [
           Expanded(child: _field('City', _cityCtrl, hint: 'London')),
           const SizedBox(width: 12),
-          Expanded(child: _field('Zip Code', _zipCtrl, hint: 'EC2A 1AB')),
+          SizedBox(width: 110, child: _field('Zip Code', _zipCtrl, hint: 'EC2A 1AB')),
         ]),
-        const SizedBox(height: 14),
+        const SizedBox(height: 16),
         _field('Address', _addressCtrl, hint: 'Street address'),
       ],
     );
