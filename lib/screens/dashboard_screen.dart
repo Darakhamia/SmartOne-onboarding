@@ -6,6 +6,7 @@ import '../utils/theme.dart';
 import '../utils/constants.dart';
 import '../widgets/progress_header.dart';
 import '../widgets/info_card.dart';
+import '../widgets/smartone_logo.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
@@ -62,48 +63,15 @@ class DashboardScreen extends StatelessWidget {
       elevation: 0,
       expandedHeight: 0,
       pinned: false,
-      leading: Padding(
-        padding: const EdgeInsets.only(left: 16),
-        child: Container(
-          width: 36,
-          height: 36,
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [AppTheme.primary, AppTheme.primaryLight],
-            ),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: const Icon(Icons.point_of_sale_rounded, color: Colors.white, size: 20),
-        ),
-      ),
-      title: const Text(
-        'SmartOne',
-        style: TextStyle(
-          fontSize: 18,
-          fontWeight: FontWeight.w800,
-          color: AppTheme.primary,
-        ),
-      ),
+      titleSpacing: 16,
+      title: const SmartOneLogo(fontSize: 18),
       actions: [
         IconButton(
-          icon: const Icon(Icons.admin_panel_settings_outlined, color: AppTheme.textSecondary),
+          icon: const Icon(Icons.tune_rounded, color: AppTheme.textSecondary, size: 22),
           onPressed: () => Navigator.pushNamed(context, AppConstants.routeAdmin),
-          tooltip: 'Demo Admin Panel',
+          tooltip: 'Admin Panel',
         ),
-        IconButton(
-          icon: Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: AppTheme.surface,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: AppTheme.border),
-            ),
-            child: const Icon(Icons.person_outline, size: 20, color: AppTheme.textSecondary),
-          ),
-          onPressed: () {},
-        ),
-        const SizedBox(width: 8),
+        const SizedBox(width: 4),
       ],
     );
   }
@@ -121,27 +89,22 @@ class DashboardScreen extends StatelessWidget {
 
     final displayName = name.isNotEmpty ? name.split(' ').first : 'Merchant';
 
-    return Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                '$greeting, $displayName 👋',
-                style: const TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w700,
-                  color: AppTheme.textPrimary,
-                ),
-              ),
-              const SizedBox(height: 4),
-              const Text(
-                "Here's your onboarding status",
-                style: TextStyle(fontSize: 14, color: AppTheme.textSecondary),
-              ),
-            ],
+        Text(
+          '$greeting, $displayName',
+          style: const TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.w700,
+            color: AppTheme.textPrimary,
+            letterSpacing: -0.3,
           ),
+        ),
+        const SizedBox(height: 3),
+        const Text(
+          "Here's your onboarding status",
+          style: TextStyle(fontSize: 14, color: AppTheme.textSecondary),
         ),
       ],
     );
@@ -179,14 +142,21 @@ class DashboardScreen extends StatelessWidget {
                     color: Colors.white.withOpacity(0.2),
                     borderRadius: BorderRadius.circular(20),
                   ),
-                  child: const Text(
-                    '⏳  CURRENT STEP',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white,
-                      letterSpacing: 0.5,
-                    ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: const [
+                      Icon(Icons.radio_button_checked, size: 11, color: Colors.white),
+                      SizedBox(width: 5),
+                      Text(
+                        'CURRENT STEP',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 Text(
@@ -231,7 +201,7 @@ class DashboardScreen extends StatelessWidget {
                       elevation: 0,
                     ),
                     child: const Text(
-                      'Take Action →',
+                      'Continue',
                       style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
                     ),
                   ),

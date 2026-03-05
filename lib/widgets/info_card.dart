@@ -31,6 +31,13 @@ class InfoCard extends StatelessWidget {
           color: AppTheme.white,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(color: AppTheme.border),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.035),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
         child: Row(
           children: [
@@ -91,29 +98,42 @@ class StatCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.08),
+        color: color.withOpacity(0.07),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: color.withOpacity(0.2)),
+        border: Border.all(color: color.withOpacity(0.18)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: color, size: 22),
-          const SizedBox(height: 8),
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.13),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(icon, color: color, size: 17),
+          ),
+          const SizedBox(height: 10),
           Text(
             value,
             style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.w700,
+              fontSize: 20,
+              fontWeight: FontWeight.w800,
               color: color,
+              letterSpacing: -0.5,
             ),
           ),
-          const SizedBox(height: 2),
+          const SizedBox(height: 1),
           Text(
             label,
-            style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+            style: const TextStyle(
+              fontSize: 11,
+              color: AppTheme.textSecondary,
+              fontWeight: FontWeight.w500,
+            ),
           ),
         ],
       ),

@@ -28,6 +28,8 @@ class PrimaryButton extends StatelessWidget {
           backgroundColor: backgroundColor ?? AppTheme.primary,
           disabledBackgroundColor: AppTheme.primary.withOpacity(0.5),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          elevation: 0,
+          shadowColor: Colors.transparent,
         ),
         child: loading
             ? const SizedBox(
@@ -76,14 +78,22 @@ class SecondaryButton extends StatelessWidget {
       height: 52,
       child: OutlinedButton(
         onPressed: onPressed,
+        style: OutlinedButton.styleFrom(
+          foregroundColor: AppTheme.primary,
+          side: const BorderSide(color: AppTheme.primary, width: 1.5),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             if (icon != null) ...[
-              Icon(icon, size: 20),
+              Icon(icon, size: 18, color: AppTheme.primary),
               const SizedBox(width: 8),
             ],
-            Text(label),
+            Text(
+              label,
+              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppTheme.primary),
+            ),
           ],
         ),
       ),

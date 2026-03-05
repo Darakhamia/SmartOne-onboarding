@@ -4,6 +4,7 @@ import '../providers/onboarding_provider.dart';
 import '../utils/theme.dart';
 import '../utils/constants.dart';
 import '../widgets/custom_button.dart';
+import '../widgets/smartone_logo.dart';
 
 class WelcomeScreen extends StatefulWidget {
   const WelcomeScreen({super.key});
@@ -69,50 +70,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
   }
 
   Widget _buildLogo() {
-    return Column(
-      children: [
-        Container(
-          width: 80,
-          height: 80,
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [AppTheme.primary, AppTheme.primaryLight],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.circular(22),
-            boxShadow: [
-              BoxShadow(
-                color: AppTheme.primary.withOpacity(0.35),
-                blurRadius: 20,
-                offset: const Offset(0, 8),
-              ),
-            ],
-          ),
-          child: const Icon(Icons.point_of_sale_rounded, size: 40, color: Colors.white),
-        ),
-        const SizedBox(height: 16),
-        const Text(
-          AppConstants.appName,
-          style: TextStyle(
-            fontSize: 28,
-            fontWeight: FontWeight.w800,
-            color: AppTheme.primary,
-            letterSpacing: -0.5,
-          ),
-        ),
-        const SizedBox(height: 4),
-        const Text(
-          AppConstants.appTagline,
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w400,
-            color: AppTheme.textSecondary,
-            letterSpacing: 0.2,
-          ),
-        ),
-      ],
-    );
+    return const SmartOneLogo(fontSize: 30, showTagline: true);
   }
 
   Widget _buildHero() {
@@ -129,7 +87,26 @@ class _WelcomeScreenState extends State<WelcomeScreen>
       ),
       child: Column(
         children: [
-          const Icon(Icons.rocket_launch_rounded, size: 48, color: AppTheme.primary),
+          Container(
+            width: 60,
+            height: 60,
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [AppTheme.primary, AppTheme.primaryLight],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(18),
+              boxShadow: [
+                BoxShadow(
+                  color: AppTheme.primary.withOpacity(0.3),
+                  blurRadius: 16,
+                  offset: const Offset(0, 6),
+                ),
+              ],
+            ),
+            child: const Icon(Icons.point_of_sale_rounded, size: 30, color: Colors.white),
+          ),
           const SizedBox(height: 16),
           const Text(
             'Start accepting card payments\nfor your business',
@@ -143,7 +120,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
           ),
           const SizedBox(height: 8),
           const Text(
-            'Complete onboarding in just a few steps and\nget your POS terminal delivered to your door.',
+            'Complete onboarding in a few steps and\nget your POS terminal delivered.',
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 13,
