@@ -1,495 +1,804 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:fl_chart/fl_chart.dart';
 import '../providers/onboarding_provider.dart';
-import '../models/onboarding_step_model.dart';
+import '../models/transaction_model.dart';
+import '../services/api_service.dart';
 import '../utils/theme.dart';
 import '../utils/constants.dart';
-import '../widgets/progress_header.dart';
-import '../widgets/info_card.dart';
-import '../widgets/smartone_logo.dart';
+import 'transaction_detail_screen.dart';
 
-class DashboardScreen extends StatelessWidget {
+class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
+
+  @override
+  State<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends State<DashboardScreen> {
+  late Future<List<Transaction>> _txnFuture;
+  late Future<Map<String, dynamic>> _statsFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  void _load() {
+    setState(() {
+      _txnFuture = ApiService.getTransactions();
+      _statsFuture = ApiService.getStats();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return Consumer<OnboardingProvider>(
       builder: (ctx, provider, _) {
         final merchant = provider.merchant;
-        final currentStep = provider.steps.firstWhere(
-          (s) => s.isCurrent,
-          orElse: () => provider.steps.last,
-        );
+        final completedSteps = provider.completedStepsCount;
+        final totalSteps = provider.totalStepsCount;
+        final progressPct =
+            totalSteps > 0 ? (completedSteps / totalSteps * 100).round() : 0;
+        final docsUploaded = provider.uploadedDocumentsCount;
+        final totalDocs = provider.totalDocumentsCount;
 
         return Scaffold(
-          backgroundColor: AppTheme.white,
-          body: CustomScrollView(
-            slivers: [
-              _buildAppBar(context, provider),
-              SliverPadding(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 100),
-                sliver: SliverList(
-                  delegate: SliverChildListDelegate([
-                    const SizedBox(height: 20),
-                    _buildGreeting(merchant.contactPerson),
-                    const SizedBox(height: 20),
-                    ProgressHeader(
-                      progress: provider.progressPercentage,
-                      currentStep: provider.completedStepsCount,
-                      totalSteps: provider.totalStepsCount,
+          backgroundColor: AppTheme.surface,
+          body: RefreshIndicator(
+            color: AppTheme.primary,
+            onRefresh: () async => _load(),
+            child: CustomScrollView(
+              slivers: [
+                // ── Header ──────────────────────────────────────────────────
+                SliverToBoxAdapter(
+                  child: Container(
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [Color(0xFF5A19B5), Color(0xFF8B4FD8)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
                     ),
-                    const SizedBox(height: 24),
-                    _buildCurrentStep(context, currentStep, provider),
-                    const SizedBox(height: 24),
-                    _buildQuickStats(provider),
-                    const SizedBox(height: 24),
-                    _buildQuickActions(context, provider),
-                    const SizedBox(height: 24),
-                    _buildRecentSteps(provider),
-                  ]),
+                    child: SafeArea(
+                      bottom: false,
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Hello, ${merchant?.companyName.split(' ').first ?? 'Merchant'} 👋',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 22,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    DateFormat('EEEE, dd MMMM')
+                                        .format(DateTime.now()),
+                                    style: TextStyle(
+                                      color: Colors.white.withOpacity(0.75),
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 12, vertical: 6),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withOpacity(0.15),
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        const Icon(Icons.radio_button_checked,
+                                            size: 10,
+                                            color: Color(0xFF00C896)),
+                                        const SizedBox(width: 6),
+                                        Text(
+                                          'Step ${completedSteps + 1} of $totalSteps',
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            // Avatar
+                            Container(
+                              width: 52,
+                              height: 52,
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.2),
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                    color: Colors.white.withOpacity(0.4),
+                                    width: 2),
+                              ),
+                              child: Center(
+                                child: Text(
+                                  merchant?.companyName.isNotEmpty == true
+                                      ? merchant!.companyName[0].toUpperCase()
+                                      : 'M',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
-              ),
-            ],
+
+                // ── Stat cards ───────────────────────────────────────────────
+                SliverToBoxAdapter(
+                  child: FutureBuilder<Map<String, dynamic>>(
+                    future: _statsFuture,
+                    builder: (ctx, snap) {
+                      final vol =
+                          (snap.data?['total_volume'] as double?) ?? 0.0;
+                      final count =
+                          (snap.data?['total_count'] as int?) ?? 0;
+                      return Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
+                        child: GridView.count(
+                          crossAxisCount: 2,
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          mainAxisSpacing: 12,
+                          crossAxisSpacing: 12,
+                          childAspectRatio: 1.55,
+                          children: [
+                            _StatCard(
+                              label: 'Total Volume',
+                              value: '€${vol.toStringAsFixed(0)}',
+                              icon: Icons.euro_rounded,
+                              color: AppTheme.primary,
+                            ),
+                            _StatCard(
+                              label: 'Transactions',
+                              value: '$count',
+                              icon: Icons.receipt_long_rounded,
+                              color: AppTheme.accent,
+                            ),
+                            _StatCard(
+                              label: 'Progress',
+                              value: '$progressPct%',
+                              icon: Icons.trending_up_rounded,
+                              color: AppTheme.success,
+                              subtitle: '$completedSteps/$totalSteps steps',
+                            ),
+                            _StatCard(
+                              label: 'Documents',
+                              value: '$docsUploaded/$totalDocs',
+                              icon: Icons.folder_rounded,
+                              color: AppTheme.warning,
+                              subtitle: docsUploaded == totalDocs
+                                  ? 'All uploaded'
+                                  : '${totalDocs - docsUploaded} remaining',
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ),
+
+                // ── Weekly chart ─────────────────────────────────────────────
+                const SliverToBoxAdapter(child: _WeeklyChart()),
+
+                // ── Current step card ────────────────────────────────────────
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                    child: _CurrentStepCard(provider: provider),
+                  ),
+                ),
+
+                // ── Recent transactions ──────────────────────────────────────
+                SliverToBoxAdapter(
+                  child: FutureBuilder<List<Transaction>>(
+                    future: _txnFuture,
+                    builder: (ctx, snap) {
+                      final txns = (snap.data ?? Transaction.mockData())
+                          .take(3)
+                          .toList();
+                      return _RecentTransactions(
+                        transactions: txns,
+                        onViewAll: () => provider.setTabIndex(1),
+                      );
+                    },
+                  ),
+                ),
+
+                // ── Quick actions ────────────────────────────────────────────
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+                    child: _QuickActions(),
+                  ),
+                ),
+              ],
+            ),
           ),
         );
       },
     );
   }
+}
 
-  Widget _buildAppBar(BuildContext context, OnboardingProvider provider) {
-    return SliverAppBar(
-      floating: true,
-      backgroundColor: AppTheme.white,
-      elevation: 0,
-      expandedHeight: 0,
-      pinned: false,
-      titleSpacing: 16,
-      title: const SmartOneLogo(fontSize: 18),
-      actions: [
-        IconButton(
-          icon: const Icon(Icons.tune_rounded, color: AppTheme.textSecondary, size: 22),
-          onPressed: () => Navigator.pushNamed(context, AppConstants.routeAdmin),
-          tooltip: 'Admin Panel',
-        ),
-        const SizedBox(width: 4),
-      ],
-    );
-  }
+// ── Stat card ────────────────────────────────────────────────────────────────
 
-  Widget _buildGreeting(String name) {
-    final hour = DateTime.now().hour;
-    String greeting;
-    if (hour < 12) {
-      greeting = 'Good morning';
-    } else if (hour < 18) {
-      greeting = 'Good afternoon';
-    } else {
-      greeting = 'Good evening';
-    }
+class _StatCard extends StatelessWidget {
+  final String label;
+  final String value;
+  final IconData icon;
+  final Color color;
+  final String? subtitle;
 
-    final displayName = name.isNotEmpty ? name.split(' ').first : 'Merchant';
+  const _StatCard({
+    required this.label,
+    required this.value,
+    required this.icon,
+    required this.color,
+    this.subtitle,
+  });
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          '$greeting, $displayName',
-          style: const TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.w700,
-            color: AppTheme.textPrimary,
-            letterSpacing: -0.3,
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppTheme.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppTheme.border),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
-        ),
-        const SizedBox(height: 3),
-        const Text(
-          "Here's your onboarding status",
-          style: TextStyle(fontSize: 14, color: AppTheme.textSecondary),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildCurrentStep(BuildContext context, OnboardingStep step, OnboardingProvider provider) {
-    return GestureDetector(
-      onTap: () => _handleStepTap(context, step, provider),
-      child: Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [Color(0xFF5A19B5), Color(0xFF7B3FD4)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: AppTheme.primary.withOpacity(0.25),
-              blurRadius: 16,
-              offset: const Offset(0, 6),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(10),
             ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: const [
-                      Icon(Icons.radio_button_checked, size: 11, color: Colors.white),
-                      SizedBox(width: 5),
-                      Text(
-                        'CURRENT STEP',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
+            child: Icon(icon, color: color, size: 18),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                  color: AppTheme.textPrimary,
+                  letterSpacing: -0.5,
+                ),
+              ),
+              Text(
+                subtitle ?? label,
+                style: const TextStyle(
+                    fontSize: 11,
+                    color: AppTheme.textSecondary,
+                    fontWeight: FontWeight.w500),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Weekly chart ─────────────────────────────────────────────────────────────
+
+class _WeeklyChart extends StatelessWidget {
+  const _WeeklyChart();
+
+  static const List<double> _data = [890, 1200, 750, 1450, 980, 1680, 1100];
+  static const List<String> _days = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+
+  @override
+  Widget build(BuildContext context) {
+    const maxY = 1680.0 * 1.3;
+    final todayIdx = (DateTime.now().weekday - 1).clamp(0, 6);
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppTheme.border),
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withOpacity(0.03),
+              blurRadius: 8,
+              offset: const Offset(0, 2)),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Text('Weekly Revenue',
+                  style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: AppTheme.textPrimary)),
+              const Spacer(),
+              const Text('Last 7 days',
+                  style: TextStyle(
+                      fontSize: 12,
+                      color: AppTheme.textLight,
+                      fontWeight: FontWeight.w500)),
+            ],
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            height: 130,
+            child: BarChart(
+              BarChartData(
+                alignment: BarChartAlignment.spaceAround,
+                maxY: maxY,
+                minY: 0,
+                barTouchData: BarTouchData(
+                  enabled: true,
+                  touchTooltipData: BarTouchTooltipData(
+                    getTooltipItem: (group, _, rod, __) => BarTooltipItem(
+                      '€${rod.toY.toInt()}',
+                      const TextStyle(
                           color: Colors.white,
-                          letterSpacing: 0.5,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ),
+                titlesData: FlTitlesData(
+                  show: true,
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      getTitlesWidget: (value, meta) {
+                        final i = value.toInt();
+                        if (i < 0 || i >= _days.length) {
+                          return const SizedBox.shrink();
+                        }
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 6),
+                          child: Text(
+                            _days[i],
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: i == todayIdx
+                                  ? FontWeight.w800
+                                  : FontWeight.w500,
+                              color: i == todayIdx
+                                  ? AppTheme.primary
+                                  : AppTheme.textLight,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  leftTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: false)),
+                  topTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: false)),
+                  rightTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: false)),
+                ),
+                gridData: FlGridData(
+                  show: true,
+                  drawVerticalLine: false,
+                  horizontalInterval: maxY / 4,
+                  getDrawingHorizontalLine: (_) => FlLine(
+                    color: AppTheme.border,
+                    strokeWidth: 1,
+                    dashArray: [4, 4],
+                  ),
+                ),
+                borderData: FlBorderData(show: false),
+                barGroups: List.generate(
+                  7,
+                  (i) => BarChartGroupData(
+                    x: i,
+                    barRods: [
+                      BarChartRodData(
+                        toY: _data[i],
+                        color: i == todayIdx
+                            ? AppTheme.primary
+                            : AppTheme.primary.withOpacity(0.35),
+                        width: 22,
+                        borderRadius: const BorderRadius.only(
+                          topLeft: Radius.circular(6),
+                          topRight: Radius.circular(6),
                         ),
                       ),
                     ],
                   ),
                 ),
-                Text(
-                  'Step ${step.index + 1}',
-                  style: const TextStyle(
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Current step card ─────────────────────────────────────────────────────────
+
+class _CurrentStepCard extends StatelessWidget {
+  final OnboardingProvider provider;
+  const _CurrentStepCard({required this.provider});
+
+  @override
+  Widget build(BuildContext context) {
+    final stepIdx = provider.currentStepIndex;
+    final step = provider.steps.isNotEmpty ? provider.steps[stepIdx] : null;
+    final progress = provider.totalStepsCount > 0
+        ? provider.completedStepsCount / provider.totalStepsCount
+        : 0.0;
+
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF3D0E8A), Color(0xFF5A19B5)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.flag_rounded, color: Colors.white, size: 16),
+              const SizedBox(width: 8),
+              Text(
+                'Current Step',
+                style: TextStyle(
+                    color: Colors.white.withOpacity(0.8),
                     fontSize: 13,
-                    color: Colors.white70,
-                    fontWeight: FontWeight.w500,
+                    fontWeight: FontWeight.w500),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(
+            step?.name ?? 'Loading…',
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 17,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            step?.description ?? '',
+            style: TextStyle(
+                color: Colors.white.withOpacity(0.7), fontSize: 13),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    value: progress,
+                    backgroundColor: Colors.white.withOpacity(0.2),
+                    valueColor: const AlwaysStoppedAnimation<Color>(
+                        Color(0xFF00C896)),
+                    minHeight: 6,
                   ),
                 ),
-              ],
-            ),
-            const SizedBox(height: 14),
-            Text(
-              step.name,
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w700,
-                color: Colors.white,
               ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              step.description,
-              style: const TextStyle(
-                fontSize: 13,
-                color: Colors.white70,
-                height: 1.4,
+              const SizedBox(width: 12),
+              Text(
+                '${(progress * 100).round()}%',
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13),
               ),
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () => _handleStepTap(context, step, provider),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      foregroundColor: AppTheme.primary,
-                      minimumSize: const Size(0, 42),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      elevation: 0,
-                    ),
-                    child: const Text(
-                      'Continue',
-                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
+            ],
+          ),
+        ],
       ),
     );
   }
+}
 
-  void _handleStepTap(BuildContext context, OnboardingStep step, OnboardingProvider provider) {
-    switch (step.index) {
-      case 0:
-        Navigator.pushNamed(context, AppConstants.routeApplication);
-        break;
-      case 1:
-        Navigator.pushNamed(context, AppConstants.routeDocuments);
-        break;
-      case 2:
-        Navigator.pushNamed(context, AppConstants.routeKyc);
-        break;
-      case 6:
-        Navigator.pushNamed(context, AppConstants.routeContract);
-        break;
-      default:
-        _showStepInfo(context, step);
-    }
-  }
+// ── Recent transactions ───────────────────────────────────────────────────────
 
-  void _showStepInfo(BuildContext context, OnboardingStep step) {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+class _RecentTransactions extends StatelessWidget {
+  final List<Transaction> transactions;
+  final VoidCallback onViewAll;
+
+  const _RecentTransactions(
+      {required this.transactions, required this.onViewAll});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+      decoration: BoxDecoration(
+        color: AppTheme.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppTheme.border),
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withOpacity(0.03),
+              blurRadius: 8,
+              offset: const Offset(0, 2)),
+        ],
       ),
-      builder: (ctx) => Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 12, 0),
+            child: Row(
               children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: AppTheme.primarySurface,
-                    borderRadius: BorderRadius.circular(12),
+                const Text('Recent Transactions',
+                    style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: AppTheme.textPrimary)),
+                const Spacer(),
+                TextButton(
+                  onPressed: onViewAll,
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 4),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   ),
-                  child: Center(
-                    child: Text(
-                      step.statusIcon,
-                      style: const TextStyle(fontSize: 22),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Step ${step.index + 1}',
-                          style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
-                      Text(step.name,
-                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
-                    ],
-                  ),
+                  child: const Text('View all',
+                      style:
+                          TextStyle(fontSize: 13, color: AppTheme.primary)),
                 ),
               ],
             ),
-            const SizedBox(height: 16),
-            Text(step.description,
-                style: const TextStyle(fontSize: 14, color: AppTheme.textSecondary, height: 1.5)),
-            const SizedBox(height: 16),
+          ),
+          const Divider(height: 16),
+          if (transactions.isEmpty)
+            const Padding(
+              padding: EdgeInsets.all(20),
+              child: Text('No transactions yet',
+                  style: TextStyle(color: AppTheme.textLight)),
+            )
+          else
+            ...transactions.asMap().entries.map((e) {
+              final isLast = e.key == transactions.length - 1;
+              final t = e.value;
+              return Column(
+                children: [
+                  _MiniTxnTile(
+                    t: t,
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) =>
+                              TransactionDetailScreen(transaction: t)),
+                    ),
+                  ),
+                  if (!isLast)
+                    const Divider(height: 1, indent: 68, endIndent: 16),
+                ],
+              );
+            }),
+          const SizedBox(height: 4),
+        ],
+      ),
+    );
+  }
+}
+
+class _MiniTxnTile extends StatelessWidget {
+  final Transaction t;
+  final VoidCallback onTap;
+  const _MiniTxnTile({required this.t, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        child: Row(
+          children: [
             Container(
-              padding: const EdgeInsets.all(14),
+              width: 40,
+              height: 40,
               decoration: BoxDecoration(
-                color: AppTheme.surface,
-                borderRadius: BorderRadius.circular(12),
+                color: t.typeColor.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(10),
               ),
-              child: Row(
+              child: Icon(t.typeIcon, color: t.typeColor, size: 18),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(Icons.info_outline, size: 16, color: AppTheme.textSecondary),
-                  const SizedBox(width: 10),
-                  const Expanded(
-                    child: Text(
-                      'SmartOne team will notify you when this step requires your action.',
-                      style: TextStyle(fontSize: 12, color: AppTheme.textSecondary),
-                    ),
-                  ),
+                  Text(t.description,
+                      style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.textPrimary)),
+                  Text(t.outlet,
+                      style: const TextStyle(
+                          fontSize: 11, color: AppTheme.textSecondary)),
                 ],
               ),
             ),
-            const SizedBox(height: 20),
+            Text(
+              t.formattedAmount,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: t.type == 'REFUND'
+                    ? AppTheme.warning
+                    : AppTheme.textPrimary,
+              ),
+            ),
           ],
         ),
       ),
     );
   }
+}
 
-  Widget _buildQuickStats(OnboardingProvider provider) {
-    return Row(
-      children: [
-        Expanded(
-          child: StatCard(
-            value: '${provider.completedStepsCount}/${provider.totalStepsCount}',
-            label: 'Steps Done',
-            icon: Icons.checklist_rounded,
-            color: AppTheme.success,
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: StatCard(
-            value: '${provider.uploadedDocumentsCount}/${provider.totalDocumentsCount}',
-            label: 'Documents',
-            icon: Icons.folder_outlined,
-            color: AppTheme.warning,
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: StatCard(
-            value: '${(provider.progressPercentage * 100).round()}%',
-            label: 'Complete',
-            icon: Icons.pie_chart_outline,
-            color: AppTheme.primary,
-          ),
-        ),
-      ],
-    );
-  }
+// ── Quick actions ─────────────────────────────────────────────────────────────
 
-  Widget _buildQuickActions(BuildContext context, OnboardingProvider provider) {
+class _QuickActions extends StatelessWidget {
+  const _QuickActions();
+
+  @override
+  Widget build(BuildContext context) {
+    final actions = [
+      _Action(
+          icon: Icons.upload_file_rounded,
+          label: 'Upload\nDocuments',
+          color: AppTheme.primary,
+          route: AppConstants.routeDocuments),
+      _Action(
+          icon: Icons.verified_user_rounded,
+          label: 'KYC\nVerification',
+          color: AppTheme.success,
+          route: AppConstants.routeKyc),
+      _Action(
+          icon: Icons.description_rounded,
+          label: 'Sign\nContract',
+          color: AppTheme.warning,
+          route: AppConstants.routeContract),
+      _Action(
+          icon: Icons.headset_mic_rounded,
+          label: 'Get\nSupport',
+          color: AppTheme.accent,
+          tab: 3),
+    ];
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Quick Actions',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppTheme.textPrimary),
-        ),
+        const Text('Quick Actions',
+            style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+                color: AppTheme.textPrimary)),
         const SizedBox(height: 12),
-        InfoCard(
-          icon: Icons.upload_file_outlined,
-          title: 'Upload Documents',
-          subtitle: '${provider.uploadedDocumentsCount} of ${provider.totalDocumentsCount} uploaded',
-          iconColor: AppTheme.warning,
-          iconBg: AppTheme.warning.withOpacity(0.1),
-          onTap: () => Navigator.pushNamed(context, AppConstants.routeDocuments),
-        ),
-        const SizedBox(height: 10),
-        InfoCard(
-          icon: Icons.verified_user_outlined,
-          title: 'KYC Verification',
-          subtitle: provider.kycCompleted ? 'Completed' : 'Required – via iDenfy',
-          iconColor: provider.kycCompleted ? AppTheme.success : AppTheme.primary,
-          iconBg: provider.kycCompleted
-              ? AppTheme.success.withOpacity(0.1)
-              : AppTheme.primarySurface,
-          onTap: () => Navigator.pushNamed(context, AppConstants.routeKyc),
-          trailing: provider.kycCompleted
-              ? const Icon(Icons.check_circle, color: AppTheme.success, size: 22)
-              : null,
-        ),
-        const SizedBox(height: 10),
-        InfoCard(
-          icon: Icons.description_outlined,
-          title: 'Contract Signing',
-          subtitle: provider.contractSigned ? 'Signed' : 'Pending Paynetics approval',
-          iconColor: provider.contractSigned ? AppTheme.success : AppTheme.textLight,
-          iconBg: provider.contractSigned
-              ? AppTheme.success.withOpacity(0.1)
-              : AppTheme.surface,
-          onTap: () => Navigator.pushNamed(context, AppConstants.routeContract),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildRecentSteps(OnboardingProvider provider) {
-    final visibleSteps = provider.steps.where((s) => !s.isLocked).toList();
-    if (visibleSteps.isEmpty) return const SizedBox.shrink();
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
         Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const Text(
-              'Progress Overview',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppTheme.textPrimary),
-            ),
-            Text(
-              '${provider.completedStepsCount} completed',
-              style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        ...provider.steps.take(6).map((step) {
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              decoration: BoxDecoration(
-                color: step.isCurrent ? AppTheme.primarySurface : AppTheme.white,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: step.isCurrent
-                      ? AppTheme.primary.withOpacity(0.25)
-                      : AppTheme.border,
-                ),
-              ),
-              child: Row(
-                children: [
-                  _buildMiniStepIcon(step),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      step.name,
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: step.isCurrent ? FontWeight.w600 : FontWeight.w500,
-                        color: step.isLocked ? AppTheme.textLight : AppTheme.textPrimary,
-                      ),
+          children: actions.asMap().entries.map((entry) {
+            final i = entry.key;
+            final a = entry.value;
+            return Expanded(
+              child: Padding(
+                padding: EdgeInsets.only(right: i < actions.length - 1 ? 8 : 0),
+                child: GestureDetector(
+                  onTap: () {
+                    if (a.route != null) {
+                      Navigator.pushNamed(context, a.route!);
+                    } else if (a.tab != null) {
+                      Provider.of<OnboardingProvider>(context, listen: false)
+                          .setTabIndex(a.tab!);
+                    }
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        vertical: 14, horizontal: 8),
+                    decoration: BoxDecoration(
+                      color: AppTheme.white,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: AppTheme.border),
+                      boxShadow: [
+                        BoxShadow(
+                            color: Colors.black.withOpacity(0.03),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2)),
+                      ],
+                    ),
+                    child: Column(
+                      children: [
+                        Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: a.color.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Icon(a.icon, color: a.color, size: 20),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          a.label,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: AppTheme.textPrimary,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
                     ),
                   ),
-                  Text(
-                    step.statusIcon,
-                    style: const TextStyle(fontSize: 16),
-                  ),
-                ],
+                ),
               ),
-            ),
-          );
-        }),
-        if (provider.steps.length > 6)
-          Center(
-            child: TextButton(
-              onPressed: () => provider.setTabIndex(2),
-              child: const Text('View all steps →', style: TextStyle(color: AppTheme.primary)),
-            ),
-          ),
+            );
+          }).toList(),
+        ),
       ],
     );
   }
+}
 
-  Widget _buildMiniStepIcon(step) {
-    if (step.isCompleted) {
-      return Container(
-        width: 24,
-        height: 24,
-        decoration: BoxDecoration(
-          color: AppTheme.success,
-          shape: BoxShape.circle,
-        ),
-        child: const Icon(Icons.check, color: Colors.white, size: 14),
-      );
-    } else if (step.isCurrent) {
-      return Container(
-        width: 24,
-        height: 24,
-        decoration: BoxDecoration(
-          color: AppTheme.primary,
-          shape: BoxShape.circle,
-        ),
-        child: const Icon(Icons.radio_button_checked, color: Colors.white, size: 14),
-      );
-    } else {
-      return Container(
-        width: 24,
-        height: 24,
-        decoration: BoxDecoration(
-          color: AppTheme.surface,
-          shape: BoxShape.circle,
-          border: Border.all(color: AppTheme.border),
-        ),
-        child: Center(
-          child: Text(
-            '${step.index + 1}',
-            style: const TextStyle(fontSize: 10, color: AppTheme.textLight),
-          ),
-        ),
-      );
-    }
-  }
+class _Action {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final String? route;
+  final int? tab;
+  const _Action(
+      {required this.icon,
+      required this.label,
+      required this.color,
+      this.route,
+      this.tab});
 }

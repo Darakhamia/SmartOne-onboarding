@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/onboarding_provider.dart';
 import '../screens/dashboard_screen.dart';
-import '../screens/documents_screen.dart';
+import '../screens/transactions_screen.dart';
 import '../screens/progress_screen.dart';
 import '../screens/support_screen.dart';
 import '../screens/profile_screen.dart';
@@ -13,7 +13,7 @@ class MainNavigation extends StatelessWidget {
 
   static const List<Widget> _screens = [
     DashboardScreen(),
-    DocumentsScreen(),
+    TransactionsScreen(),
     ProgressScreen(),
     SupportScreen(),
     ProfileScreen(),
@@ -31,7 +31,8 @@ class MainNavigation extends StatelessWidget {
           bottomNavigationBar: Container(
             decoration: BoxDecoration(
               color: AppTheme.white,
-              border: const Border(top: BorderSide(color: AppTheme.border, width: 1)),
+              border:
+                  const Border(top: BorderSide(color: AppTheme.border, width: 1)),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withOpacity(0.04),
@@ -56,15 +57,12 @@ class MainNavigation extends StatelessWidget {
                       onTap: () => provider.setTabIndex(0),
                     ),
                     _NavItem(
-                      icon: Icons.folder_outlined,
-                      activeIcon: Icons.folder_rounded,
-                      label: 'Documents',
+                      icon: Icons.receipt_long_outlined,
+                      activeIcon: Icons.receipt_long_rounded,
+                      label: 'Transactions',
                       index: 1,
                       currentIndex: provider.currentTabIndex,
                       onTap: () => provider.setTabIndex(1),
-                      badge: provider.uploadedDocumentsCount < provider.totalDocumentsCount
-                          ? '${provider.totalDocumentsCount - provider.uploadedDocumentsCount}'
-                          : null,
                     ),
                     _NavItem(
                       icon: Icons.timeline_outlined,
@@ -159,7 +157,8 @@ class _NavItem extends StatelessWidget {
                         color: AppTheme.error,
                         shape: BoxShape.circle,
                       ),
-                      constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                      constraints:
+                          const BoxConstraints(minWidth: 16, minHeight: 16),
                       child: Text(
                         badge!,
                         style: const TextStyle(
@@ -178,8 +177,10 @@ class _NavItem extends StatelessWidget {
               label,
               style: TextStyle(
                 fontSize: 10,
-                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                color: isSelected ? AppTheme.primary : AppTheme.textLight,
+                fontWeight:
+                    isSelected ? FontWeight.w700 : FontWeight.w500,
+                color:
+                    isSelected ? AppTheme.primary : AppTheme.textLight,
               ),
             ),
           ],

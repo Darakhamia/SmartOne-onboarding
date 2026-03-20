@@ -3,6 +3,7 @@ class AppConstants {
   static const String appTagline = 'Merchant Onboarding Platform';
 
   // Routes
+  static const String routeIntro = '/intro';
   static const String routeWelcome = '/';
   static const String routeMain = '/main';
   static const String routeApplication = '/application';

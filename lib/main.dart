@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'providers/onboarding_provider.dart';
 import 'utils/theme.dart';
 import 'utils/constants.dart';
 import 'screens/welcome_screen.dart';
+import 'screens/onboarding_intro_screen.dart';
 import 'screens/application_form_screen.dart';
 import 'screens/documents_screen.dart';
 import 'screens/kyc_screen.dart';
@@ -12,8 +14,9 @@ import 'screens/contract_screen.dart';
 import 'screens/admin_panel_screen.dart';
 import 'navigation/main_navigation.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
@@ -26,11 +29,16 @@ void main() {
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
   ]);
-  runApp(const SmartOneApp());
+
+  final prefs = await SharedPreferences.getInstance();
+  final introShown = prefs.getBool('intro_shown') ?? false;
+
+  runApp(SmartOneApp(showIntro: !introShown));
 }
 
 class SmartOneApp extends StatelessWidget {
-  const SmartOneApp({super.key});
+  final bool showIntro;
+  const SmartOneApp({super.key, required this.showIntro});
 
   @override
   Widget build(BuildContext context) {
@@ -40,8 +48,10 @@ class SmartOneApp extends StatelessWidget {
         title: 'SmartOne Merchant Onboarding',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.lightTheme,
-        initialRoute: AppConstants.routeWelcome,
+        initialRoute:
+            showIntro ? AppConstants.routeIntro : AppConstants.routeWelcome,
         routes: {
+          AppConstants.routeIntro: (ctx) => const OnboardingIntroScreen(),
           AppConstants.routeWelcome: (ctx) => const WelcomeScreen(),
           AppConstants.routeMain: (ctx) => const MainNavigation(),
           AppConstants.routeApplication: (ctx) => const ApplicationFormScreen(),
