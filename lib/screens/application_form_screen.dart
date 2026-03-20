@@ -5,8 +5,6 @@ import '../models/merchant_model.dart';
 import '../models/outlet_model.dart';
 import '../utils/theme.dart';
 import '../utils/constants.dart';
-import '../widgets/custom_button.dart';
-import '../widgets/section_header.dart';
 
 class ApplicationFormScreen extends StatefulWidget {
   const ApplicationFormScreen({super.key});
@@ -15,10 +13,13 @@ class ApplicationFormScreen extends StatefulWidget {
   State<ApplicationFormScreen> createState() => _ApplicationFormScreenState();
 }
 
-class _ApplicationFormScreenState extends State<ApplicationFormScreen> {
+class _ApplicationFormScreenState extends State<ApplicationFormScreen>
+    with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   bool _loading = false;
   int _currentSection = 0;
+  late AnimationController _animCtrl;
+  late Animation<double> _fadeAnim;
 
   // Company Profile
   final _companyNameCtrl = TextEditingController();
@@ -54,28 +55,72 @@ class _ApplicationFormScreenState extends State<ApplicationFormScreen> {
   final _zipCtrl = TextEditingController();
   final _addressCtrl = TextEditingController();
 
+  static const _sections = [
+    _SectionMeta(
+      title: 'Company\nProfile',
+      subtitle: 'Your company\'s legal registration details.',
+      icon: Icons.business_rounded,
+    ),
+    _SectionMeta(
+      title: 'Business\nDetails',
+      subtitle: 'Tell us about your business model and outlets.',
+      icon: Icons.storefront_rounded,
+    ),
+    _SectionMeta(
+      title: 'Projected\nSales',
+      subtitle: 'Expected transaction volumes and turnover.',
+      icon: Icons.trending_up_rounded,
+    ),
+    _SectionMeta(
+      title: 'Outlet\nDetails',
+      subtitle: 'Locations where POS terminals will be installed.',
+      icon: Icons.location_on_rounded,
+    ),
+    _SectionMeta(
+      title: 'Contact\nDetails',
+      subtitle: 'Primary contact and legal entity information.',
+      icon: Icons.person_rounded,
+    ),
+  ];
+
   @override
   void initState() {
     super.initState();
+    _animCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
+    _fadeAnim = CurvedAnimation(parent: _animCtrl, curve: Curves.easeOut);
+    _animCtrl.forward();
+
     _addOutlet();
-    // Pre-fill with demo data if available
     final merchant = context.read<OnboardingProvider>().merchant;
     if (merchant.companyName.isNotEmpty) {
       _companyNameCtrl.text = merchant.companyName;
       _companyIdCtrl.text = merchant.companyId;
-      _selectedRetailType = merchant.retailType.isNotEmpty ? merchant.retailType : AppConstants.retailTypes.first;
+      _selectedRetailType = merchant.retailType.isNotEmpty
+          ? merchant.retailType
+          : AppConstants.retailTypes.first;
       _numberOfOutletsCtrl.text = merchant.numberOfOutlets.toString();
       _customReceipt = merchant.customReceiptDesign;
       _acceptanceCurrency = merchant.acceptanceCurrency;
       _currency = merchant.currency;
-      _volumeMonthlyCtrl.text = merchant.volumeMonthly > 0 ? merchant.volumeMonthly.toStringAsFixed(0) : '';
-      _txMonthlyCtrl.text = merchant.transactionsMonthly > 0 ? merchant.transactionsMonthly.toString() : '';
-      _txAnnualCtrl.text = merchant.transactionsAnnual > 0 ? merchant.transactionsAnnual.toString() : '';
-      _avgTxCtrl.text = merchant.avgTransactionValue > 0 ? merchant.avgTransactionValue.toStringAsFixed(2) : '';
-      _maxTxCtrl.text = merchant.maxTransactionValue > 0 ? merchant.maxTransactionValue.toStringAsFixed(2) : '';
-      _minTxCtrl.text = merchant.minTransactionValue > 0 ? merchant.minTransactionValue.toStringAsFixed(2) : '';
-      _turnoverMonthlyCtrl.text = merchant.turnoverMonthly > 0 ? merchant.turnoverMonthly.toStringAsFixed(0) : '';
-      _turnoverAnnualCtrl.text = merchant.turnoverAnnual > 0 ? merchant.turnoverAnnual.toStringAsFixed(0) : '';
+      _volumeMonthlyCtrl.text =
+          merchant.volumeMonthly > 0 ? merchant.volumeMonthly.toStringAsFixed(0) : '';
+      _txMonthlyCtrl.text =
+          merchant.transactionsMonthly > 0 ? merchant.transactionsMonthly.toString() : '';
+      _txAnnualCtrl.text =
+          merchant.transactionsAnnual > 0 ? merchant.transactionsAnnual.toString() : '';
+      _avgTxCtrl.text =
+          merchant.avgTransactionValue > 0 ? merchant.avgTransactionValue.toStringAsFixed(2) : '';
+      _maxTxCtrl.text =
+          merchant.maxTransactionValue > 0 ? merchant.maxTransactionValue.toStringAsFixed(2) : '';
+      _minTxCtrl.text =
+          merchant.minTransactionValue > 0 ? merchant.minTransactionValue.toStringAsFixed(2) : '';
+      _turnoverMonthlyCtrl.text =
+          merchant.turnoverMonthly > 0 ? merchant.turnoverMonthly.toStringAsFixed(0) : '';
+      _turnoverAnnualCtrl.text =
+          merchant.turnoverAnnual > 0 ? merchant.turnoverAnnual.toStringAsFixed(0) : '';
       _contactCompanyCtrl.text = merchant.contactCompanyName;
       _tinCtrl.text = merchant.tin;
       _contactPersonCtrl.text = merchant.contactPerson;
@@ -103,9 +148,7 @@ class _ApplicationFormScreenState extends State<ApplicationFormScreen> {
   void _removeOutlet(int index) {
     if (_outletControllers.length > 1) {
       setState(() {
-        for (final ctrl in _outletControllers[index].values) {
-          ctrl.dispose();
-        }
+        for (final ctrl in _outletControllers[index].values) ctrl.dispose();
         _outletControllers.removeAt(index);
       });
     }
@@ -113,6 +156,7 @@ class _ApplicationFormScreenState extends State<ApplicationFormScreen> {
 
   @override
   void dispose() {
+    _animCtrl.dispose();
     _companyNameCtrl.dispose();
     _companyIdCtrl.dispose();
     _numberOfOutletsCtrl.dispose();
@@ -138,502 +182,416 @@ class _ApplicationFormScreenState extends State<ApplicationFormScreen> {
     super.dispose();
   }
 
-  final List<String> _sections = [
-    'Company Profile',
-    'Business',
-    'Sales',
-    'Outlets',
-    'Contact',
-  ];
+  void _goNext() {
+    _animCtrl.forward(from: 0);
+    setState(() => _currentSection++);
+  }
+
+  void _goBack() {
+    _animCtrl.forward(from: 0);
+    setState(() => _currentSection--);
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppTheme.white,
-      appBar: AppBar(
-        title: const Text('Application Form'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, size: 18),
-          onPressed: () => Navigator.pop(context),
-        ),
-        actions: [
-          if (context.read<OnboardingProvider>().merchant.isSubmitted)
-            Container(
-              margin: const EdgeInsets.only(right: 16),
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: AppTheme.success.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: const Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.check_circle, size: 14, color: AppTheme.success),
-                  SizedBox(width: 4),
-                  Text('Submitted', style: TextStyle(fontSize: 12, color: AppTheme.success, fontWeight: FontWeight.w600)),
-                ],
-              ),
-            ),
-        ],
-      ),
-      body: Column(
-        children: [
-          _buildSectionTabs(),
-          Expanded(
-            child: Form(
-              key: _formKey,
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(20, 24, 20, 96),
-                children: [
-                  if (_currentSection == 0) _buildCompanyProfile(),
-                  if (_currentSection == 1) _buildBusinessQuestionnaire(),
-                  if (_currentSection == 2) _buildProjectedSales(),
-                  if (_currentSection == 3) _buildOutletDetails(),
-                  if (_currentSection == 4) _buildContactDetails(),
-                  const SizedBox(height: 24),
-                  _buildNavigationButtons(),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+    final meta = _sections[_currentSection];
+    final isLast = _currentSection == _sections.length - 1;
+    final isFirst = _currentSection == 0;
 
-  Widget _buildSectionTabs() {
-    return Column(
-      children: [
-        Container(
-          height: 52,
-          color: AppTheme.white,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            itemCount: _sections.length,
-            itemBuilder: (ctx, i) {
-              final selected = _currentSection == i;
-              final done = i < _currentSection;
-              return GestureDetector(
-                onTap: () => setState(() => _currentSection = i),
-                child: Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 9),
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  decoration: BoxDecoration(
-                    color: selected
-                        ? AppTheme.primary
-                        : done
-                            ? AppTheme.primary.withOpacity(0.07)
-                            : AppTheme.surface,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: selected
-                          ? AppTheme.primary
-                          : done
-                              ? AppTheme.primary.withOpacity(0.25)
-                              : AppTheme.border,
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        child: Column(
+          children: [
+            // ── Top bar ────────────────────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(8, 8, 16, 0),
+              child: Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
+                    onPressed: isFirst ? () => Navigator.pop(context) : _goBack,
+                    color: AppTheme.textPrimary,
+                  ),
+                  const Spacer(),
+                  Text(
+                    '${_currentSection + 1} / ${_sections.length}',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.textSecondary,
                     ),
                   ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
+                ],
+              ),
+            ),
+
+            // ── Progress bar ───────────────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: LinearProgressIndicator(
+                  value: (_currentSection + 1) / _sections.length,
+                  backgroundColor: const Color(0xFFEEEEEE),
+                  valueColor:
+                      const AlwaysStoppedAnimation<Color>(AppTheme.primary),
+                  minHeight: 3,
+                ),
+              ),
+            ),
+
+            // ── Content ────────────────────────────────────────────────────
+            Expanded(
+              child: FadeTransition(
+                opacity: _fadeAnim,
+                child: Form(
+                  key: _formKey,
+                  child: ListView(
+                    padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
                     children: [
-                      if (done)
-                        Padding(
-                          padding: const EdgeInsets.only(right: 5),
-                          child: Icon(Icons.check_circle_rounded, size: 12, color: AppTheme.primary),
-                        )
-                      else
-                        Padding(
-                          padding: const EdgeInsets.only(right: 5),
-                          child: Text(
-                            '${i + 1}',
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                              color: selected ? Colors.white.withOpacity(0.7) : AppTheme.textLight,
-                            ),
-                          ),
-                        ),
+                      // Section heading
                       Text(
-                        _sections[i],
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: selected
-                              ? Colors.white
-                              : done
-                                  ? AppTheme.primary
-                                  : AppTheme.textSecondary,
+                        meta.title,
+                        style: const TextStyle(
+                          fontSize: 32,
+                          fontWeight: FontWeight.w800,
+                          color: AppTheme.textPrimary,
+                          height: 1.15,
+                          letterSpacing: -1,
                         ),
                       ),
+                      const SizedBox(height: 8),
+                      Text(
+                        meta.subtitle,
+                        style: const TextStyle(
+                          fontSize: 15,
+                          color: AppTheme.textSecondary,
+                          height: 1.5,
+                        ),
+                      ),
+                      const SizedBox(height: 32),
+
+                      // Fields for current section
+                      if (_currentSection == 0) ..._companyProfileFields(),
+                      if (_currentSection == 1) ..._businessFields(),
+                      if (_currentSection == 2) ..._salesFields(),
+                      if (_currentSection == 3) ..._outletFields(),
+                      if (_currentSection == 4) ..._contactFields(),
+
+                      const SizedBox(height: 40),
+
+                      // ── Continue / Submit button ────────────────────────
+                      _BigButton(
+                        label: isLast ? 'Submit Application' : 'Continue',
+                        icon: isLast
+                            ? Icons.check_rounded
+                            : Icons.arrow_forward_rounded,
+                        loading: _loading,
+                        onPressed: isLast ? _submitForm : _goNext,
+                      ),
+                      const SizedBox(height: 32),
                     ],
                   ),
                 ),
-              );
-            },
-          ),
+              ),
+            ),
+          ],
         ),
-        LinearProgressIndicator(
-          value: _sections.length > 1 ? _currentSection / (_sections.length - 1) : 0,
-          backgroundColor: AppTheme.border,
-          color: AppTheme.primary,
-          minHeight: 2,
-        ),
-      ],
+      ),
     );
   }
 
-  Widget _buildCompanyProfile() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const FormSectionHeader(title: 'Company Profile', icon: Icons.business_outlined),
-        _field('European Company Name', _companyNameCtrl, hint: 'e.g. Apex Retail Solutions Ltd'),
+  // ── Section field builders ──────────────────────────────────────────────
+
+  List<Widget> _companyProfileFields() => [
+        _Field(
+          label: 'Company Name',
+          hint: 'e.g. Apex Retail Solutions Ltd',
+          controller: _companyNameCtrl,
+        ),
         const SizedBox(height: 16),
-        _field('Company ID / Registration Number', _companyIdCtrl, hint: 'e.g. GB12345678'),
-      ],
-    );
-  }
+        _Field(
+          label: 'Registration Number',
+          hint: 'e.g. GB12345678',
+          controller: _companyIdCtrl,
+        ),
+      ];
 
-  Widget _buildBusinessQuestionnaire() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const FormSectionHeader(title: 'Business Questionnaire', icon: Icons.quiz_outlined),
-        const Text('Retail Type & Business Model', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppTheme.textSecondary)),
+  List<Widget> _businessFields() => [
+        _Label('Retail Type'),
         const SizedBox(height: 8),
-        DropdownButtonFormField<String>(
+        _StyledDropdown<String>(
           value: _selectedRetailType,
-          decoration: const InputDecoration(),
           items: AppConstants.retailTypes
-              .map((t) => DropdownMenuItem(value: t, child: Text(t, style: const TextStyle(fontSize: 14))))
+              .map((t) => DropdownMenuItem(value: t, child: Text(t)))
               .toList(),
           onChanged: (v) => setState(() => _selectedRetailType = v!),
         ),
         const SizedBox(height: 16),
-        _field('Number of Outlets', _numberOfOutletsCtrl, hint: '1', keyboardType: TextInputType.number),
-        const SizedBox(height: 16),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          decoration: BoxDecoration(
-            color: AppTheme.surface,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppTheme.border),
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: const [
-                    Text('Custom Receipt Design', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
-                    SizedBox(height: 2),
-                    Text('Branded receipt with your logo', style: TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
-                  ],
-                ),
-              ),
-              Switch(
-                value: _customReceipt,
-                onChanged: (v) => setState(() => _customReceipt = v),
-                activeColor: AppTheme.primary,
-              ),
-            ],
-          ),
+        _Field(
+          label: 'Number of Outlets',
+          hint: '1',
+          controller: _numberOfOutletsCtrl,
+          keyboardType: TextInputType.number,
         ),
         const SizedBox(height: 16),
-        const Text('Acceptance Currency', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppTheme.textSecondary)),
+        _Label('Acceptance Currency'),
         const SizedBox(height: 8),
-        _currencyDropdown(_acceptanceCurrency, (v) => setState(() => _acceptanceCurrency = v!)),
-      ],
-    );
-  }
+        _StyledDropdown<String>(
+          value: _acceptanceCurrency,
+          items: AppConstants.currencies
+              .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+              .toList(),
+          onChanged: (v) => setState(() => _acceptanceCurrency = v!),
+        ),
+        const SizedBox(height: 16),
+        _ToggleTile(
+          label: 'Custom Receipt Design',
+          subtitle: 'Branded receipt with your logo',
+          value: _customReceipt,
+          onChanged: (v) => setState(() => _customReceipt = v),
+        ),
+      ];
 
-  Widget _buildProjectedSales() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const FormSectionHeader(title: 'Projected Sales', icon: Icons.trending_up_outlined),
-        const Text('Currency', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppTheme.textSecondary)),
+  List<Widget> _salesFields() => [
+        _Label('Currency'),
         const SizedBox(height: 8),
-        _currencyDropdown(_currency, (v) => setState(() => _currency = v!)),
-        const SizedBox(height: 20),
-
-        // === Turnover — primary block ===
-        _buildSalesGroup(
-          label: 'Turnover',
-          icon: Icons.account_balance_wallet_outlined,
-          color: AppTheme.primary,
-          children: [
-            Row(children: [
-              Expanded(child: _fieldWithCurrency('Monthly', _turnoverMonthlyCtrl, hint: '85,000')),
-              const SizedBox(width: 12),
-              Expanded(child: _fieldWithCurrency('Annual', _turnoverAnnualCtrl, hint: '1,020,000')),
-            ]),
-          ],
+        _StyledDropdown<String>(
+          value: _currency,
+          items: AppConstants.currencies
+              .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+              .toList(),
+          onChanged: (v) => setState(() => _currency = v!),
         ),
-        const SizedBox(height: 14),
+        const SizedBox(height: 24),
+        _GroupLabel(label: 'Turnover', color: AppTheme.primary),
+        const SizedBox(height: 12),
+        Row(children: [
+          Expanded(
+              child: _Field(
+                  label: 'Monthly',
+                  hint: '85,000',
+                  controller: _turnoverMonthlyCtrl,
+                  prefix: _currency,
+                  keyboardType: TextInputType.number)),
+          const SizedBox(width: 12),
+          Expanded(
+              child: _Field(
+                  label: 'Annual',
+                  hint: '1,020,000',
+                  controller: _turnoverAnnualCtrl,
+                  prefix: _currency,
+                  keyboardType: TextInputType.number)),
+        ]),
+        const SizedBox(height: 24),
+        _GroupLabel(label: 'Volume & Transactions', color: AppTheme.accent),
+        const SizedBox(height: 12),
+        Row(children: [
+          Expanded(
+              child: _Field(
+                  label: 'Vol. Monthly',
+                  hint: '85,000',
+                  controller: _volumeMonthlyCtrl,
+                  prefix: _currency,
+                  keyboardType: TextInputType.number)),
+          const SizedBox(width: 12),
+          Expanded(
+              child: _Field(
+                  label: 'Txns / Month',
+                  hint: '1,200',
+                  controller: _txMonthlyCtrl,
+                  keyboardType: TextInputType.number)),
+        ]),
+        const SizedBox(height: 12),
+        _Field(
+            label: 'Transactions Annual',
+            hint: '14,400',
+            controller: _txAnnualCtrl,
+            keyboardType: TextInputType.number),
+        const SizedBox(height: 24),
+        _GroupLabel(label: 'Transaction Values', color: AppTheme.warning),
+        const SizedBox(height: 12),
+        Row(children: [
+          Expanded(
+              child: _Field(
+                  label: 'Average',
+                  hint: '70.83',
+                  controller: _avgTxCtrl,
+                  prefix: _currency,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true))),
+          const SizedBox(width: 12),
+          Expanded(
+              child: _Field(
+                  label: 'Maximum',
+                  hint: '5,000',
+                  controller: _maxTxCtrl,
+                  prefix: _currency,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true))),
+        ]),
+        const SizedBox(height: 12),
+        Row(children: [
+          Expanded(
+              child: _Field(
+                  label: 'Minimum',
+                  hint: '5.00',
+                  controller: _minTxCtrl,
+                  prefix: _currency,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true))),
+          const Expanded(child: SizedBox()),
+        ]),
+      ];
 
-        // === Volume & Transactions ===
-        _buildSalesGroup(
-          label: 'Volume & Transactions',
-          icon: Icons.bar_chart_rounded,
-          color: AppTheme.accent,
-          children: [
-            Row(children: [
-              Expanded(child: _fieldWithCurrency('Volume Monthly', _volumeMonthlyCtrl, hint: '85,000')),
-              const SizedBox(width: 12),
-              Expanded(child: _field('Transactions / mo', _txMonthlyCtrl, hint: '1,200', keyboardType: TextInputType.number)),
-            ]),
-            const SizedBox(height: 12),
-            _field('Transactions Annual', _txAnnualCtrl, hint: '14,400', keyboardType: TextInputType.number),
-          ],
-        ),
-        const SizedBox(height: 14),
-
-        // === Transaction Values ===
-        _buildSalesGroup(
-          label: 'Transaction Values',
-          icon: Icons.receipt_long_outlined,
-          color: AppTheme.warning,
-          children: [
-            Row(children: [
-              Expanded(child: _fieldWithCurrency('Average', _avgTxCtrl, hint: '70.83', decimal: true)),
-              const SizedBox(width: 12),
-              Expanded(child: _fieldWithCurrency('Maximum', _maxTxCtrl, hint: '5,000.00', decimal: true)),
-            ]),
-            const SizedBox(height: 12),
-            Row(children: [
-              Expanded(child: _fieldWithCurrency('Minimum', _minTxCtrl, hint: '5.00', decimal: true)),
-              const Expanded(child: SizedBox()),
-            ]),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSalesGroup({
-    required String label,
-    required IconData icon,
-    required Color color,
-    required List<Widget> children,
-  }) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.04),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: color.withOpacity(0.2)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(children: [
-            Container(
-              padding: const EdgeInsets.all(5),
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.12),
-                borderRadius: BorderRadius.circular(7),
-              ),
-              child: Icon(icon, size: 13, color: color),
-            ),
-            const SizedBox(width: 7),
-            Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: color, letterSpacing: 0.3)),
-          ]),
-          const SizedBox(height: 14),
-          ...children,
-        ],
-      ),
-    );
-  }
-
-  Widget _fieldWithCurrency(
-    String label,
-    TextEditingController ctrl, {
-    String hint = '',
-    bool decimal = false,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppTheme.textSecondary)),
-        const SizedBox(height: 6),
-        TextFormField(
-          controller: ctrl,
-          keyboardType: decimal ? TextInputType.numberWithOptions(decimal: true) : TextInputType.number,
-          style: const TextStyle(fontSize: 14, color: AppTheme.textPrimary, fontWeight: FontWeight.w500),
-          decoration: InputDecoration(
-            hintText: hint,
-            prefixText: '$_currency ',
-            prefixStyle: const TextStyle(fontSize: 13, color: AppTheme.textSecondary, fontWeight: FontWeight.w500),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildOutletDetails() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const FormSectionHeader(title: 'Outlet Details', icon: Icons.store_outlined),
-            TextButton.icon(
-              onPressed: _addOutlet,
-              icon: const Icon(Icons.add, size: 16),
-              label: const Text('Add Outlet'),
-              style: TextButton.styleFrom(foregroundColor: AppTheme.primary),
-            ),
-          ],
-        ),
-        ..._outletControllers.asMap().entries.map((entry) {
+  List<Widget> _outletFields() => [
+        ..._outletControllers.asMap().entries.expand((entry) {
           final i = entry.key;
           final ctrls = entry.value;
-          return Container(
-            margin: const EdgeInsets.only(bottom: 16),
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: AppTheme.surface,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: AppTheme.border),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          return [
+            if (i > 0) const SizedBox(height: 24),
+            Row(
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text('Outlet ${i + 1}', style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
-                    if (_outletControllers.length > 1)
-                      IconButton(
-                        icon: const Icon(Icons.remove_circle_outline, color: AppTheme.error, size: 20),
-                        onPressed: () => _removeOutlet(i),
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                _field('Outlet Name', ctrls['name']!, hint: 'e.g. Main Branch'),
-                const SizedBox(height: 10),
-                _field('Retail Activity', ctrls['activity']!, hint: 'e.g. General Retail'),
-                const SizedBox(height: 10),
-                _field('Outlet Address', ctrls['address']!, hint: 'Full address'),
-                const SizedBox(height: 10),
-                Row(children: [
-                  Expanded(child: _field('Number of POS', ctrls['pos']!, hint: '1', keyboardType: TextInputType.number)),
-                  const SizedBox(width: 12),
-                  Expanded(child: _field('Contact Person', ctrls['contact']!, hint: 'Name')),
-                ]),
-                const SizedBox(height: 10),
-                _field('Contact Phone', ctrls['phone']!, hint: '+44 7700 900000', keyboardType: TextInputType.phone),
+                Text('Outlet ${i + 1}',
+                    style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: AppTheme.textPrimary)),
+                const Spacer(),
+                if (_outletControllers.length > 1)
+                  GestureDetector(
+                    onTap: () => _removeOutlet(i),
+                    child: const Text('Remove',
+                        style: TextStyle(
+                            fontSize: 13,
+                            color: AppTheme.error,
+                            fontWeight: FontWeight.w500)),
+                  ),
               ],
             ),
-          );
+            const SizedBox(height: 12),
+            _Field(
+                label: 'Outlet Name',
+                hint: 'e.g. Main Branch',
+                controller: ctrls['name']!),
+            const SizedBox(height: 12),
+            _Field(
+                label: 'Retail Activity',
+                hint: 'e.g. General Retail',
+                controller: ctrls['activity']!),
+            const SizedBox(height: 12),
+            _Field(
+                label: 'Outlet Address',
+                hint: 'Full address',
+                controller: ctrls['address']!),
+            const SizedBox(height: 12),
+            Row(children: [
+              Expanded(
+                  child: _Field(
+                      label: 'POS Count',
+                      hint: '1',
+                      controller: ctrls['pos']!,
+                      keyboardType: TextInputType.number)),
+              const SizedBox(width: 12),
+              Expanded(
+                  child: _Field(
+                      label: 'Contact Person',
+                      hint: 'Name',
+                      controller: ctrls['contact']!)),
+            ]),
+            const SizedBox(height: 12),
+            _Field(
+                label: 'Contact Phone',
+                hint: '+44 7700 900000',
+                controller: ctrls['phone']!,
+                keyboardType: TextInputType.phone),
+            if (i < _outletControllers.length - 1)
+              const Padding(
+                padding: EdgeInsets.only(top: 8),
+                child: Divider(),
+              ),
+          ];
         }),
-      ],
-    );
-  }
-
-  Widget _buildContactDetails() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const FormSectionHeader(title: 'Contact Details', icon: Icons.contact_mail_outlined),
-        Row(children: [
-          Expanded(child: _field('Company Name', _contactCompanyCtrl, hint: 'Legal company name')),
-          const SizedBox(width: 12),
-          Expanded(child: _field('TIN / Tax Number', _tinCtrl, hint: 'e.g. GB987654321')),
-        ]),
         const SizedBox(height: 16),
-        _field('Contact Person', _contactPersonCtrl, hint: 'Full name'),
-        const SizedBox(height: 16),
-        Row(children: [
-          Expanded(child: _field('Phone', _phoneCtrl, hint: '+44 20 0000 0000', keyboardType: TextInputType.phone)),
-          const SizedBox(width: 12),
-          Expanded(child: _field('Email', _emailCtrl, hint: 'contact@company.com', keyboardType: TextInputType.emailAddress)),
-        ]),
-        const SizedBox(height: 16),
-        Row(children: [
-          Expanded(child: _field('City', _cityCtrl, hint: 'London')),
-          const SizedBox(width: 12),
-          SizedBox(width: 110, child: _field('Zip Code', _zipCtrl, hint: 'EC2A 1AB')),
-        ]),
-        const SizedBox(height: 16),
-        _field('Address', _addressCtrl, hint: 'Street address'),
-      ],
-    );
-  }
-
-  Widget _buildNavigationButtons() {
-    final isLast = _currentSection == _sections.length - 1;
-    final isFirst = _currentSection == 0;
-
-    return Column(
-      children: [
-        if (isLast) ...[
-          PrimaryButton(
-            label: 'Submit Application',
-            icon: Icons.send_rounded,
-            loading: _loading,
-            onPressed: _submitForm,
+        GestureDetector(
+          onTap: _addOutlet,
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            decoration: BoxDecoration(
+              border: Border.all(
+                  color: AppTheme.primary.withOpacity(0.3),
+                  style: BorderStyle.solid),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.add_rounded, size: 18, color: AppTheme.primary),
+                SizedBox(width: 6),
+                Text('Add Another Outlet',
+                    style: TextStyle(
+                        color: AppTheme.primary,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14)),
+              ],
+            ),
           ),
-          const SizedBox(height: 10),
-        ] else ...[
-          PrimaryButton(
-            label: 'Next: ${_sections[_currentSection + 1]}',
-            icon: Icons.arrow_forward,
-            onPressed: () => setState(() => _currentSection++),
-          ),
-          const SizedBox(height: 10),
-        ],
-        if (!isFirst)
-          SecondaryButton(
-            label: 'Back',
-            icon: Icons.arrow_back,
-            onPressed: () => setState(() => _currentSection--),
-          ),
-      ],
-    );
-  }
-
-  Widget _field(
-    String label,
-    TextEditingController ctrl, {
-    String hint = '',
-    TextInputType keyboardType = TextInputType.text,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppTheme.textSecondary)),
-        const SizedBox(height: 6),
-        TextFormField(
-          controller: ctrl,
-          keyboardType: keyboardType,
-          style: const TextStyle(fontSize: 14, color: AppTheme.textPrimary),
-          decoration: InputDecoration(hintText: hint),
         ),
-      ],
-    );
-  }
+      ];
 
-  Widget _currencyDropdown(String value, ValueChanged<String?> onChanged) {
-    return DropdownButtonFormField<String>(
-      value: value,
-      decoration: const InputDecoration(),
-      items: AppConstants.currencies
-          .map((c) => DropdownMenuItem(value: c, child: Text(c, style: const TextStyle(fontSize: 14))))
-          .toList(),
-      onChanged: onChanged,
-    );
-  }
+  List<Widget> _contactFields() => [
+        Row(children: [
+          Expanded(
+              child: _Field(
+                  label: 'Company Name',
+                  hint: 'Legal name',
+                  controller: _contactCompanyCtrl)),
+          const SizedBox(width: 12),
+          Expanded(
+              child: _Field(
+                  label: 'TIN / Tax No.',
+                  hint: 'GB987654321',
+                  controller: _tinCtrl)),
+        ]),
+        const SizedBox(height: 16),
+        _Field(
+            label: 'Contact Person',
+            hint: 'Full name',
+            controller: _contactPersonCtrl),
+        const SizedBox(height: 16),
+        _Field(
+            label: 'Phone',
+            hint: '+44 20 0000 0000',
+            controller: _phoneCtrl,
+            keyboardType: TextInputType.phone),
+        const SizedBox(height: 16),
+        _Field(
+            label: 'Email',
+            hint: 'contact@company.com',
+            controller: _emailCtrl,
+            keyboardType: TextInputType.emailAddress),
+        const SizedBox(height: 16),
+        Row(children: [
+          Expanded(
+              child: _Field(
+                  label: 'City', hint: 'London', controller: _cityCtrl)),
+          const SizedBox(width: 12),
+          SizedBox(
+              width: 110,
+              child: _Field(
+                  label: 'Postcode',
+                  hint: 'EC2A 1AB',
+                  controller: _zipCtrl)),
+        ]),
+        const SizedBox(height: 16),
+        _Field(
+            label: 'Street Address',
+            hint: 'Street address',
+            controller: _addressCtrl),
+      ];
+
+  // ── Submit ─────────────────────────────────────────────────────────────
 
   Future<void> _submitForm() async {
     setState(() => _loading = true);
-
     await Future.delayed(const Duration(seconds: 2));
 
     final outlets = _outletControllers.map((ctrls) {
@@ -655,14 +613,19 @@ class _ApplicationFormScreenState extends State<ApplicationFormScreen> {
       customReceiptDesign: _customReceipt,
       acceptanceCurrency: _acceptanceCurrency,
       currency: _currency,
-      volumeMonthly: double.tryParse(_volumeMonthlyCtrl.text.replaceAll(',', '')) ?? 0,
-      transactionsMonthly: int.tryParse(_txMonthlyCtrl.text.replaceAll(',', '')) ?? 0,
-      transactionsAnnual: int.tryParse(_txAnnualCtrl.text.replaceAll(',', '')) ?? 0,
+      volumeMonthly:
+          double.tryParse(_volumeMonthlyCtrl.text.replaceAll(',', '')) ?? 0,
+      transactionsMonthly:
+          int.tryParse(_txMonthlyCtrl.text.replaceAll(',', '')) ?? 0,
+      transactionsAnnual:
+          int.tryParse(_txAnnualCtrl.text.replaceAll(',', '')) ?? 0,
       avgTransactionValue: double.tryParse(_avgTxCtrl.text) ?? 0,
       maxTransactionValue: double.tryParse(_maxTxCtrl.text) ?? 0,
       minTransactionValue: double.tryParse(_minTxCtrl.text) ?? 0,
-      turnoverMonthly: double.tryParse(_turnoverMonthlyCtrl.text.replaceAll(',', '')) ?? 0,
-      turnoverAnnual: double.tryParse(_turnoverAnnualCtrl.text.replaceAll(',', '')) ?? 0,
+      turnoverMonthly:
+          double.tryParse(_turnoverMonthlyCtrl.text.replaceAll(',', '')) ?? 0,
+      turnoverAnnual:
+          double.tryParse(_turnoverAnnualCtrl.text.replaceAll(',', '')) ?? 0,
       outlets: outlets,
       contactCompanyName: _contactCompanyCtrl.text,
       tin: _tinCtrl.text,
@@ -676,9 +639,7 @@ class _ApplicationFormScreenState extends State<ApplicationFormScreen> {
 
     if (!mounted) return;
     context.read<OnboardingProvider>().submitApplication(application);
-
     setState(() => _loading = false);
-
     _showSuccessDialog();
   }
 
@@ -686,42 +647,337 @@ class _ApplicationFormScreenState extends State<ApplicationFormScreen> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
+      builder: (ctx) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  color: AppTheme.success.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.check_rounded,
+                    color: AppTheme.success, size: 42),
+              ),
+              const SizedBox(height: 24),
+              const Text('All done!',
+                  style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.5)),
+              const SizedBox(height: 10),
+              const Text(
+                'Your application has been received. Next step is uploading your compliance documents.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                    fontSize: 14,
+                    color: AppTheme.textSecondary,
+                    height: 1.6),
+              ),
+              const SizedBox(height: 28),
+              SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    Navigator.pushReplacementNamed(
+                        context, AppConstants.routeMain);
+                  },
+                  child: const Text('Go to Dashboard'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Reusable UI components ────────────────────────────────────────────────────
+
+class _SectionMeta {
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  const _SectionMeta(
+      {required this.title, required this.subtitle, required this.icon});
+}
+
+class _Field extends StatelessWidget {
+  final String label;
+  final String hint;
+  final TextEditingController controller;
+  final TextInputType keyboardType;
+  final String? prefix;
+
+  const _Field({
+    required this.label,
+    required this.hint,
+    required this.controller,
+    this.keyboardType = TextInputType.text,
+    this.prefix,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: AppTheme.textSecondary,
+            letterSpacing: 0.1,
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextFormField(
+          controller: controller,
+          keyboardType: keyboardType,
+          style: const TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w500,
+            color: AppTheme.textPrimary,
+          ),
+          decoration: InputDecoration(
+            hintText: hint,
+            filled: true,
+            fillColor: const Color(0xFFF7F7F8),
+            prefixText: prefix != null ? '$prefix  ' : null,
+            prefixStyle: const TextStyle(
+                fontSize: 14,
+                color: AppTheme.textSecondary,
+                fontWeight: FontWeight.w500),
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide.none,
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide.none,
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide:
+                  const BorderSide(color: AppTheme.primary, width: 1.5),
+            ),
+            hintStyle: const TextStyle(
+                fontSize: 14,
+                color: AppTheme.textLight,
+                fontWeight: FontWeight.w400),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _Label extends StatelessWidget {
+  final String text;
+  const _Label(this.text);
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      text,
+      style: const TextStyle(
+        fontSize: 13,
+        fontWeight: FontWeight.w600,
+        color: AppTheme.textSecondary,
+        letterSpacing: 0.1,
+      ),
+    );
+  }
+}
+
+class _GroupLabel extends StatelessWidget {
+  final String label;
+  final Color color;
+  const _GroupLabel({required this.label, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          width: 3,
+          height: 14,
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+            color: color,
+            letterSpacing: 0.2,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _StyledDropdown<T> extends StatelessWidget {
+  final T value;
+  final List<DropdownMenuItem<T>> items;
+  final ValueChanged<T?> onChanged;
+
+  const _StyledDropdown({
+    required this.value,
+    required this.items,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return DropdownButtonFormField<T>(
+      value: value,
+      items: items,
+      onChanged: onChanged,
+      icon: const Icon(Icons.keyboard_arrow_down_rounded,
+          color: AppTheme.textSecondary, size: 20),
+      style: const TextStyle(
+          fontSize: 15, fontWeight: FontWeight.w500, color: AppTheme.textPrimary),
+      decoration: InputDecoration(
+        filled: true,
+        fillColor: const Color(0xFFF7F7F8),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppTheme.primary, width: 1.5),
+        ),
+      ),
+    );
+  }
+}
+
+class _ToggleTile extends StatelessWidget {
+  final String label;
+  final String subtitle;
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  const _ToggleTile({
+    required this.label,
+    required this.subtitle,
+    required this.value,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => onChanged(!value),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF7F7F8),
+          borderRadius: BorderRadius.circular(12),
+          border: value
+              ? Border.all(color: AppTheme.primary, width: 1.5)
+              : Border.all(color: Colors.transparent),
+        ),
+        child: Row(
           children: [
-            const SizedBox(height: 8),
-            Container(
-              width: 72,
-              height: 72,
-              decoration: BoxDecoration(
-                color: AppTheme.success.withOpacity(0.1),
-                shape: BoxShape.circle,
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(label,
+                      style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w500,
+                          color: AppTheme.textPrimary)),
+                  const SizedBox(height: 2),
+                  Text(subtitle,
+                      style: const TextStyle(
+                          fontSize: 12, color: AppTheme.textSecondary)),
+                ],
               ),
-              child: const Icon(Icons.check_circle, color: AppTheme.success, size: 40),
             ),
-            const SizedBox(height: 20),
-            const Text('Application Submitted!', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
-            const SizedBox(height: 10),
-            const Text(
-              'Your merchant application has been received. Next step is to upload your compliance documents.',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 13, color: AppTheme.textSecondary, height: 1.5),
-            ),
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(ctx);
-                  Navigator.pushReplacementNamed(context, AppConstants.routeMain);
-                },
-                child: const Text('Go to Dashboard'),
-              ),
+            Switch(
+              value: value,
+              onChanged: onChanged,
+              activeColor: AppTheme.primary,
+              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _BigButton extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final bool loading;
+  final VoidCallback onPressed;
+
+  const _BigButton({
+    required this.label,
+    required this.icon,
+    required this.loading,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      height: 56,
+      child: ElevatedButton(
+        onPressed: loading ? null : onPressed,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppTheme.primary,
+          foregroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+          elevation: 0,
+        ),
+        child: loading
+            ? const SizedBox(
+                width: 22,
+                height: 22,
+                child: CircularProgressIndicator(
+                    color: Colors.white, strokeWidth: 2.5),
+              )
+            : Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(label,
+                      style: const TextStyle(
+                          fontSize: 16, fontWeight: FontWeight.w700)),
+                  const SizedBox(width: 8),
+                  Icon(icon, size: 18),
+                ],
+              ),
       ),
     );
   }
