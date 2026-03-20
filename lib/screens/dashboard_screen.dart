@@ -203,6 +203,67 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                 ),
 
+                // ── KYC Banner ───────────────────────────────────────────────
+                if (provider.merchant != null &&
+                    provider.merchant!.isSubmitted &&
+                    !provider.kycCompleted)
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                      child: GestureDetector(
+                        onTap: () => Navigator.pushNamed(
+                            context, AppConstants.routeKyc),
+                        child: Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFF1A1033), Color(0xFF3B1F7A)],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 46,
+                                height: 46,
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.15),
+                                  borderRadius: BorderRadius.circular(13),
+                                ),
+                                child: const Icon(
+                                    Icons.verified_user_rounded,
+                                    color: Colors.white,
+                                    size: 22),
+                              ),
+                              const SizedBox(width: 14),
+                              const Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text('Complete KYC Verification',
+                                        style: TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w700)),
+                                    SizedBox(height: 3),
+                                    Text('Verify your identity to activate your account',
+                                        style: TextStyle(
+                                            color: Colors.white70,
+                                            fontSize: 12)),
+                                  ],
+                                ),
+                              ),
+                              const Icon(Icons.arrow_forward_ios_rounded,
+                                  color: Colors.white54, size: 16),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+
                 // ── Weekly chart ─────────────────────────────────────────────
                 const SliverToBoxAdapter(child: _WeeklyChart()),
 
