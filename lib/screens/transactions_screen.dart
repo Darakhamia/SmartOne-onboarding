@@ -16,7 +16,9 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
   late Future<List<Transaction>> _future;
   String _filter = 'ALL';
   String _search = '';
-  final TextEditingController _searchCtrl = TextEditingController();
+  final _searchCtrl = TextEditingController();
+  final _searchFocus = FocusNode();
+  bool _searchOpen = false;
 
   static const _filters = ['ALL', 'SALE', 'REFUND', 'VOID'];
 
@@ -26,44 +28,67 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
     _load();
   }
 
-  void _load() {
-    setState(() {
-      _future = ApiService.getTransactions();
-    });
-  }
-
   @override
   void dispose() {
     _searchCtrl.dispose();
+    _searchFocus.dispose();
     super.dispose();
   }
 
-  List<Transaction> _applyFilters(List<Transaction> all) {
-    return all.where((t) {
-      final matchFilter = _filter == 'ALL' || t.type == _filter;
-      final q = _search.toLowerCase();
-      final matchSearch = q.isEmpty ||
-          t.id.toLowerCase().contains(q) ||
-          t.outlet.toLowerCase().contains(q) ||
-          t.description.toLowerCase().contains(q) ||
-          t.terminalId.toLowerCase().contains(q);
-      return matchFilter && matchSearch;
-    }).toList();
-  }
+  void _load() => setState(() => _future = ApiService.getTransactions());
+
+  List<Transaction> _filtered(List<Transaction> all) => all.where((t) {
+        final fOk = _filter == 'ALL' || t.type == _filter;
+        final q = _search.toLowerCase();
+        final sOk = q.isEmpty ||
+            t.id.toLowerCase().contains(q) ||
+            t.outlet.toLowerCase().contains(q) ||
+            t.description.toLowerCase().contains(q);
+        return fOk && sOk;
+      }).toList();
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.surface,
+      backgroundColor: const Color(0xFFF5F5F7),
       appBar: AppBar(
-        backgroundColor: AppTheme.white,
-        title: const Text('Transactions',
-            style: TextStyle(fontWeight: FontWeight.w700)),
+        backgroundColor: Colors.white,
+        automaticallyImplyLeading: false,
+        titleSpacing: 16,
+        title: _searchOpen
+            ? TextField(
+                controller: _searchCtrl,
+                focusNode: _searchFocus,
+                autofocus: true,
+                onChanged: (v) => setState(() => _search = v),
+                style: const TextStyle(fontSize: 15),
+                decoration: const InputDecoration(
+                  hintText: 'Search transactions…',
+                  border: InputBorder.none,
+                  hintStyle: TextStyle(color: AppTheme.textLight),
+                ),
+              )
+            : const Text('Transactions',
+                style: TextStyle(fontWeight: FontWeight.w700)),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh_rounded),
+            icon: Icon(_searchOpen ? Icons.close_rounded : Icons.search_rounded,
+                size: 22),
+            onPressed: () {
+              setState(() {
+                _searchOpen = !_searchOpen;
+                if (!_searchOpen) {
+                  _search = '';
+                  _searchCtrl.clear();
+                }
+              });
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.refresh_rounded, size: 22),
             onPressed: _load,
           ),
+          const SizedBox(width: 4),
         ],
       ),
       body: FutureBuilder<List<Transaction>>(
@@ -71,120 +96,83 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
         builder: (context, snap) {
           if (snap.connectionState == ConnectionState.waiting) {
             return const Center(
-              child: CircularProgressIndicator(color: AppTheme.primary),
-            );
+                child: CircularProgressIndicator(
+                    color: AppTheme.primary, strokeWidth: 2.5));
           }
           final all = snap.data ?? Transaction.mockData();
-          final filtered = _applyFilters(all);
-          final approved = all.where((t) => t.type == 'SALE' && t.isApproved);
-          final totalVolume =
-              approved.fold(0.0, (s, t) => s + t.amount);
+          final filtered = _filtered(all);
+
+          final totalVol = all
+              .where((t) => t.type == 'SALE' && t.isApproved)
+              .fold(0.0, (s, t) => s + t.amount);
+          final declined = all.where((t) => t.isDeclined).length;
 
           return Column(
             children: [
-              // Summary bar
+              // ── Summary ──────────────────────────────────────────────
               Container(
-                color: AppTheme.white,
+                color: Colors.white,
                 padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    const EdgeInsets.fromLTRB(16, 14, 16, 14),
                 child: Row(
                   children: [
-                    _SummaryChip(
-                      label: 'Total Volume',
-                      value: '€${totalVolume.toStringAsFixed(0)}',
-                      color: AppTheme.primary,
-                    ),
-                    const SizedBox(width: 12),
-                    _SummaryChip(
-                      label: 'Transactions',
-                      value: '${all.length}',
-                      color: AppTheme.accent,
-                    ),
-                    const SizedBox(width: 12),
-                    _SummaryChip(
-                      label: 'Declined',
-                      value:
-                          '${all.where((t) => t.isDeclined).length}',
-                      color: AppTheme.error,
-                    ),
+                    _SumCard(
+                        label: 'Volume',
+                        value: '€${(totalVol / 1000).toStringAsFixed(1)}k',
+                        color: AppTheme.primary),
+                    const SizedBox(width: 10),
+                    _SumCard(
+                        label: 'Transactions',
+                        value: '${all.length}',
+                        color: AppTheme.accent),
+                    const SizedBox(width: 10),
+                    _SumCard(
+                        label: 'Declined',
+                        value: '$declined',
+                        color: AppTheme.error),
                   ],
                 ),
               ),
 
-              // Search
+              // ── Filters ──────────────────────────────────────────────
               Container(
-                color: AppTheme.white,
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                child: TextField(
-                  controller: _searchCtrl,
-                  onChanged: (v) => setState(() => _search = v),
-                  decoration: InputDecoration(
-                    hintText: 'Search by ID, outlet, terminal…',
-                    prefixIcon: const Icon(Icons.search_rounded, size: 20),
-                    suffixIcon: _search.isNotEmpty
-                        ? IconButton(
-                            icon: const Icon(Icons.clear_rounded, size: 18),
-                            onPressed: () {
-                              _searchCtrl.clear();
-                              setState(() => _search = '');
-                            },
-                          )
-                        : null,
-                    contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 10),
-                    isDense: true,
-                  ),
-                ),
-              ),
-
-              // Filter chips
-              Container(
-                color: AppTheme.white,
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: _filters.map((f) {
-                      final isActive = _filter == f;
-                      return Padding(
-                        padding: const EdgeInsets.only(right: 8),
-                        child: GestureDetector(
-                          onTap: () => setState(() => _filter = f),
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 180),
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 8),
-                            decoration: BoxDecoration(
-                              color: isActive
-                                  ? AppTheme.primary
-                                  : AppTheme.surface,
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(
-                                color: isActive
-                                    ? AppTheme.primary
-                                    : AppTheme.border,
-                              ),
-                            ),
-                            child: Text(
-                              f,
+                color: Colors.white,
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+                child: Row(
+                  children: _filters.map((f) {
+                    final active = _filter == f;
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: GestureDetector(
+                        onTap: () => setState(() => _filter = f),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 150),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 7),
+                          decoration: BoxDecoration(
+                            color: active
+                                ? AppTheme.primary
+                                : const Color(0xFFF5F5F7),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(f,
                               style: TextStyle(
-                                color: isActive
-                                    ? Colors.white
-                                    : AppTheme.textSecondary,
                                 fontSize: 13,
                                 fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
+                                color: active
+                                    ? Colors.white
+                                    : AppTheme.textSecondary,
+                              )),
                         ),
-                      );
-                    }).toList(),
-                  ),
+                      ),
+                    );
+                  }).toList(),
                 ),
               ),
+
               const Divider(height: 1),
 
-              // List
+              // ── List ─────────────────────────────────────────────────
               Expanded(
                 child: filtered.isEmpty
                     ? Center(
@@ -192,21 +180,23 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Icon(Icons.receipt_long_outlined,
-                                size: 48, color: AppTheme.textLight),
+                                size: 44, color: AppTheme.textLight),
                             const SizedBox(height: 12),
-                            Text('No transactions found',
+                            const Text('No transactions',
                                 style: TextStyle(
-                                    color: AppTheme.textLight, fontSize: 15)),
+                                    color: AppTheme.textSecondary,
+                                    fontSize: 15)),
                           ],
                         ),
                       )
-                    : ListView.separated(
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        itemCount: filtered.length,
-                        separatorBuilder: (_, __) =>
-                            const SizedBox(height: 0),
-                        itemBuilder: (_, i) =>
-                            _TransactionTile(txn: filtered[i]),
+                    : ListView.builder(
+                        itemCount: filtered.length + 1,
+                        itemBuilder: (_, i) {
+                          if (i == 0) return const SizedBox(height: 8);
+                          return _TxnTile(
+                              txn: filtered[i - 1],
+                              prevDate: i > 1 ? filtered[i - 2].createdAt : null);
+                        },
                       ),
               ),
             ],
@@ -217,20 +207,21 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
   }
 }
 
-class _SummaryChip extends StatelessWidget {
+// ── Summary card ─────────────────────────────────────────────────────────────
+
+class _SumCard extends StatelessWidget {
   final String label;
   final String value;
   final Color color;
-  const _SummaryChip(
-      {required this.label, required this.value, required this.color});
+  const _SumCard({required this.label, required this.value, required this.color});
 
   @override
   Widget build(BuildContext context) {
     return Expanded(
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+        padding: const EdgeInsets.symmetric(vertical: 11, horizontal: 12),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.08),
+          color: color.withOpacity(0.07),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Column(
@@ -238,13 +229,14 @@ class _SummaryChip extends StatelessWidget {
           children: [
             Text(value,
                 style: TextStyle(
-                    color: color,
                     fontSize: 18,
-                    fontWeight: FontWeight.w800)),
+                    fontWeight: FontWeight.w800,
+                    color: color,
+                    letterSpacing: -0.5)),
             Text(label,
                 style: const TextStyle(
-                    color: AppTheme.textSecondary,
                     fontSize: 11,
+                    color: AppTheme.textSecondary,
                     fontWeight: FontWeight.w500)),
           ],
         ),
@@ -253,103 +245,132 @@ class _SummaryChip extends StatelessWidget {
   }
 }
 
-class _TransactionTile extends StatelessWidget {
+// ── Transaction tile ──────────────────────────────────────────────────────────
+
+class _TxnTile extends StatelessWidget {
   final Transaction txn;
-  const _TransactionTile({required this.txn});
+  final DateTime? prevDate;
+  const _TxnTile({required this.txn, this.prevDate});
+
+  bool _newDay(DateTime a, DateTime? b) {
+    if (b == null) return true;
+    return a.day != b.day || a.month != b.month || a.year != b.year;
+  }
 
   @override
   Widget build(BuildContext context) {
-    final df = DateFormat('dd MMM, HH:mm');
-    return InkWell(
-      onTap: () => Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => TransactionDetailScreen(transaction: txn),
-        ),
-      ),
-      child: Container(
-        color: AppTheme.white,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        child: Row(
-          children: [
-            // Icon
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: txn.typeColor.withOpacity(0.12),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(txn.typeIcon, color: txn.typeColor, size: 20),
+    final showDate = _newDay(txn.createdAt, prevDate);
+    final df = DateFormat('HH:mm');
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Date separator
+        if (showDate)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 6),
+            child: Text(
+              _dayLabel(txn.createdAt),
+              style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.textSecondary),
             ),
-            const SizedBox(width: 12),
-            // Info
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    txn.description,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: AppTheme.textPrimary,
-                    ),
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    '${txn.outlet}  ·  ${txn.terminalId}',
-                    style: const TextStyle(
-                        fontSize: 12, color: AppTheme.textSecondary),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    df.format(txn.createdAt),
-                    style: const TextStyle(
-                        fontSize: 11, color: AppTheme.textLight),
-                  ),
-                ],
-              ),
+          ),
+        // Tile
+        GestureDetector(
+          onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (_) =>
+                      TransactionDetailScreen(transaction: txn))),
+          child: Container(
+            margin: const EdgeInsets.fromLTRB(16, 0, 16, 6),
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(14),
             ),
-            // Amount + status
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
+            child: Row(
               children: [
-                Text(
-                  txn.formattedAmount,
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    color: txn.type == 'REFUND'
-                        ? AppTheme.warning
-                        : AppTheme.textPrimary,
+                // Type icon
+                Container(
+                  width: 46,
+                  height: 46,
+                  decoration: BoxDecoration(
+                    color: txn.typeColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(13),
+                  ),
+                  child: Icon(txn.typeIcon, color: txn.typeColor, size: 20),
+                ),
+                const SizedBox(width: 12),
+                // Description
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(txn.description,
+                          style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: AppTheme.textPrimary)),
+                      const SizedBox(height: 2),
+                      Text('${txn.outlet}  ·  ${txn.terminalId}',
+                          style: const TextStyle(
+                              fontSize: 12,
+                              color: AppTheme.textSecondary)),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 4),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: txn.statusColor.withOpacity(0.12),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    txn.status,
-                    style: TextStyle(
-                      color: txn.statusColor,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
+                // Right side
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(txn.formattedAmount,
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          color: txn.type == 'REFUND'
+                              ? AppTheme.warning
+                              : AppTheme.textPrimary,
+                        )),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 7, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: txn.statusColor.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(txn.status,
+                              style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
+                                  color: txn.statusColor)),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(df.format(txn.createdAt),
+                            style: const TextStyle(
+                                fontSize: 10,
+                                color: AppTheme.textLight)),
+                      ],
                     ),
-                  ),
+                  ],
                 ),
               ],
             ),
-            const SizedBox(width: 4),
-            const Icon(Icons.chevron_right_rounded,
-                size: 18, color: AppTheme.textLight),
-          ],
+          ),
         ),
-      ),
+      ],
     );
+  }
+
+  String _dayLabel(DateTime dt) {
+    final now = DateTime.now();
+    if (dt.day == now.day && dt.month == now.month) return 'Today';
+    if (dt.day == now.day - 1 && dt.month == now.month) return 'Yesterday';
+    return DateFormat('EEEE, dd MMM').format(dt);
   }
 }

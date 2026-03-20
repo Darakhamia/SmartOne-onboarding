@@ -58,7 +58,7 @@ class ProgressScreen extends StatelessWidget {
     final completed = provider.completedStepsCount;
     final total = provider.totalStepsCount;
     final remaining = total - completed;
-    final daysEstimate = remaining * 1; // 1 business day per step on average
+    final daysEstimate = (remaining / 3).ceil().clamp(1, 30); // ~3 days total
 
     return Container(
       padding: const EdgeInsets.all(18),
